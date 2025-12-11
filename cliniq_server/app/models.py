@@ -1,8 +1,13 @@
 from django.db import models
 
+
+class Config(models.Model):
+    age = models.IntegerField()
+    gender = models.IntegerField()
+
 class Connection(models.Model):
-    from_user = models.ForeignKey('UserProfile', related_name='connections_from', on_delete=models.CASCADE)
-    to_user = models.ForeignKey('UserProfile', related_name='connections_to', on_delete=models.CASCADE)
+    user_from = models.ForeignKey('UserProfile', related_name='connections_from', on_delete=models.CASCADE)
+    user_to = models.ForeignKey('UserProfile', related_name='connections_to', on_delete=models.CASCADE)
     accepted = models.BooleanField(default=False)
     access_diet_data = models.BooleanField(default=False)
     access_mental_health_data = models.BooleanField(default=False)
@@ -33,3 +38,4 @@ class UserProfile(models.Model):
     diet_summary = models.TextField(blank=True, null=True)
     mental_health_summary = models.TextField(blank=True, null=True)
     model_context = models.TextField(blank=True, null=True)
+    premium_plan = models.BooleanField(default=False)
