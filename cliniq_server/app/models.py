@@ -5,14 +5,14 @@ class Config(models.Model):
     age = models.IntegerField()
     gender = models.IntegerField()
 
+
 class Connection(models.Model):
+    id = models.AutoField(primary_key=True)
     user_from = models.ForeignKey('UserProfile', related_name='connections_from', on_delete=models.CASCADE)
     user_to = models.ForeignKey('UserProfile', related_name='connections_to', on_delete=models.CASCADE)
     accepted = models.BooleanField(default=False)
     access_diet_data = models.BooleanField(default=False)
-    access_mental_health_data = models.BooleanField(default=False)
     access_vital_signs_data = models.BooleanField(default=False)
-    is_professional = models.BooleanField(default=False)
 
 
 class DeviceRecords(models.Model):

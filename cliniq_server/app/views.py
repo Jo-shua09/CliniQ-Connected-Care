@@ -14,6 +14,71 @@ model_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "model.ker
 def home(request):
     return redirect("/admin")
 
+def signup(request):
+    surname = request.GET["surname"]
+    first_name = request.GET["first_name"]
+    username = request.GET["username"]
+    password = request.GET["password"]
+    email = request.GET["email"]
+    age = request.GET["age"]
+    gender = request.GET["gender"]
+
+    if UserProfile.objects.filter(username=username).exists():
+        UserProfile.objects.create(
+            surname=surname,
+            first_name=first_name,
+            username=username,
+            password=password,
+            email=email,
+            age=age,
+            gender=gender
+        )
+        return JsonResponse({"success": True})
+    return JsonResponse({"success": False})
+
+def login(request):
+    username = request.GET["username"]
+    password = request.GET["password"]
+
+    if UserProfile.objects.filter(username=username, password=password).exists():
+        return JsonResponse({"success": True})
+    return JsonResponse({"success": False})
+
+def create_connection(request):
+    user_from_username = request.GET["user_from"]
+    user_to_username = request.GET["user_to"]
+
+    user_from = UserProfile.objects.get(username=user_from_username)
+    user_to = UserProfile.objects.get(username=user_to_username)
+
+    if not Connection.objects.filter(user_from=user_from, user_to=user_to).exists():
+        Connection.objects.create(
+            user_from=user_from,
+            user_to=user_to,
+        )
+        return JsonResponse({"success": True})
+    return JsonResponse({"success": False})
+
+def get_connections(request):
+    username = request.GET["username"]
+    user = UserProfile.objects.get(username=username)
+    
+    connections = Connection.objects.filter(user_from=user, accepted=True) | Connection.objects.filter(user_to=user, accepted=True)
+    connections_list = []
+    for conn in connections:
+        if conn.user_from == user:
+            other_user = conn.user_to
+        else:
+            other_user = conn.user_from
+        connections_list.append({
+            "username": other_user.username,
+            "first_name": other_user.first_name,
+            "surname": other_user.surname,
+            "email": other_user.email,
+        })
+    return JsonResponse({"connections": connections_list})
+    
+
 # input = Input(shape = (5,))
 # x = Dense(50, name = 'dense1', activation="relu")(input)
 # x = Dense(50, name = 'dense2', activation="relu")(x)
