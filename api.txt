@@ -20,30 +20,74 @@ response
     - success
 
 
+/user_profile
+request
+    - username
+response
+    - email
+    - premium_plan
+    - phone_number
+    - surname
+    - first_name
+    - age
+    - gender
+    - diet_summary
+    - mental_health_summary
+
+
 /create_connection
 request
-    - user_from (the person sending request)
-    - user_to
+    - monitored (the person sending request)
+    - monitored_by
 response
     - success
 
 
 /get_connections
 request
-    - 
+    - username
+response
+    - monitored (list contains username, email, id)
+    - monitored_by --
 
 
+/accept_connection
+request
+    - id
+response
+    - success
 
-surname = models.CharField(max_length=150)
-    first_name = models.CharField(max_length=150)
-    username = models.CharField(max_length=150, unique=True)
-    password = models.CharField(max_length=128)
-    email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
-    age = models.PositiveIntegerField(blank=True, null=True)
-    gender = models.CharField(max_length=10, blank=True, null=True)
-    device_id = models.CharField(max_length=255, blank=True, null=True)
-    diet_summary = models.TextField(blank=True, null=True)
-    mental_health_summary = models.TextField(blank=True, null=True)
-    model_context = models.TextField(blank=True, null=True)
-    premium_plan = models.BooleanField(default=False)
+/cancel_connection
+request
+    -id
+response
+    -success
+
+/set_device_id
+request
+    - username
+    - device_id
+response
+    - success
+
+
+/has_device
+request
+    - username
+response
+    - success
+
+
+/set_premium
+request
+    - username
+    - value
+response
+    - success
+
+
+/is_premium
+request
+    - username
+response
+    - success

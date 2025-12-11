@@ -1,18 +1,26 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from app.models import *
-import tensorflow as tf
+import keras
+import random
 import os
 import datetime
 import tensorflow as tf
 from django.utils import timezone
 
 
-model_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "model.keras")
+deployed_on_pythonanywhere = False
+if os.getenv("PYTHONANYWHERE_DOMAIN") is not None:
+    deployed_on_pythonanywhere = True
+    global model
+    model_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "model.keras")
+    model = keras.models.load_model(model_path)
+
 
 
 def home(request):
     return redirect("/admin")
+
 
 def signup(request):
     surname = request.GET["surname"]
@@ -36,6 +44,7 @@ def signup(request):
         return JsonResponse({"success": True})
     return JsonResponse({"success": False})
 
+
 def login(request):
     username = request.GET["username"]
     password = request.GET["password"]
@@ -44,120 +53,111 @@ def login(request):
         return JsonResponse({"success": True})
     return JsonResponse({"success": False})
 
+
 def create_connection(request):
-    user_from_username = request.GET["user_from"]
-    user_to_username = request.GET["user_to"]
+    monitored_username = request.GET["monitored"]
+    monitored_username = request.GET["monitored_by"]
 
-    user_from = UserProfile.objects.get(username=user_from_username)
-    user_to = UserProfile.objects.get(username=user_to_username)
+    monitored = UserProfile.objects.get(username=monitored_username)
+    monitored_by = UserProfile.objects.get(username=monitored_username)
 
-    if not Connection.objects.filter(user_from=user_from, user_to=user_to).exists():
+    if not Connection.objects.filter(monitored=monitored, monitored_by=monitored_by).exists():
         Connection.objects.create(
-            user_from=user_from,
-            user_to=user_to,
+            monitored=monitored,
+            monitored_by=monitored_by
         )
         return JsonResponse({"success": True})
     return JsonResponse({"success": False})
 
+
 def get_connections(request):
     username = request.GET["username"]
     user = UserProfile.objects.get(username=username)
+
+    monitoring = []
+    monitored_by = []
     
-    connections = Connection.objects.filter(user_from=user, accepted=True) | Connection.objects.filter(user_to=user, accepted=True)
-    connections_list = []
-    for conn in connections:
-        if conn.user_from == user:
-            other_user = conn.user_to
-        else:
-            other_user = conn.user_from
-        connections_list.append({
-            "username": other_user.username,
-            "first_name": other_user.first_name,
-            "surname": other_user.surname,
-            "email": other_user.email,
+    for conn in Connection.objects.filter(monitored=user):
+        monitored_by.append({
+            "username": conn.monitored_by.username,
+            "email": conn.monitored_by.email,
+            "accepted": conn.accepted,
+            "id": conn.id,
         })
-    return JsonResponse({"connections": connections_list})
-    
-
-# input = Input(shape = (5,))
-# x = Dense(50, name = 'dense1', activation="relu")(input)
-# x = Dense(50, name = 'dense2', activation="relu")(x)
-# x = Dense(20, name = 'dense3', activation="relu")(x)
-# output = Dense(2, activation="relu")(x)
-# model = Model(inputs = input ,outputs = output)
-# # model.compile(loss = 'mse', optimizer = Adam(learning_rate=0.1), metrics=[RootMeanSquaredError()])
-# model.load_weights(file_path)
-
-# model = tf.keras.models.load_model(file_path)
+    for conn in Connection.objects.filter(monitored_by=user):
+        monitoring.append({
+            "username": conn.monitored.username,
+            "email": conn.monitored.email,
+            "accepted": conn.accepted,
+            "id": conn.id,
+        })
+    return JsonResponse({"monitoring": monitoring, "monitored_by": monitored_by})
 
 
-# # Create your views here.
-
-# def getBP(age, gender, spo2, bpm, temp):
-#     pred = model.predict(tf.constant([[int(age), int(gender), int(spo2), int(bpm), float(temp)]]))
-#     return pred[0][0], pred[0][1]
-
-# def getAlert(spo2, bpm, temp, sbp, dbp):
-#     message = ""
-
-#     if (bpm> 90):
-#         message = "Heartbeat rate is too high seek medical attention"
-
-#     elif (bpm< 60):
-#         message = "Signs of BradyCardia, seek medical attention"
-#     if (temp > 38):
-#         message += ". High temperature, Fever!"
-
-#     elif (temp <= 35.1):
-#         message += ". Signs of hypothermia"
-#     if (spo2 < 90):
-#         message += ". Hypoxemia signs. seek doctors help quickly."
-
-#     if bpm> 90 or bpm < 60 or temp > 38 or temp < 35.1 or spo2 > 90:
-#         return message
-#     return "Healthy state from restricted health data"
+def accept_connection(request):
+    connection_id = request.GET["id"]
+    connection = Connection.objects.get(id=connection_id)
+    connection.accepted = True
+    connection.save()
+    return JsonResponse({"success": True})
 
 
+def cancel_connection(request):
+    connection_id = request.GET["id"]
+    connection = Connection.objects.get(id=connection_id)
+    connection.delete()
+    return JsonResponse({"success": True})
+
+def set_device_id(request):
+    username = request.GET["username"]
+    device_id = request.GET["device_id"]
+    user = UserProfile.objects.get(username=username)
+    user.device_id = device_id
+    user.save()
+    return JsonResponse({"success": True})
 
 
-# def device_push_data(request):
-#     if request.method == "GET":
-#         config = Config.objects.all()[0]
+def has_device(request):
+    username = request.GET["username"]
+    user = UserProfile.objects.get(username=username)
+    return JsonResponse({"value": user.device_id is not None and user.device_id != ""})
 
-#         age = config.age
-#         gender = config.gender
-#         spo2 = int(request.GET["spo2"])
-#         bpm = int(request.GET["bpm"])
-#         temp = float(request.GET["temp"])
-#         sbp, dbp = getBP(age, gender, spo2, bpm, temp)
-#         alert = getAlert(spo2, bpm, temp, sbp, dbp)
 
-#         DeviceRecords.objects.create(age=age, gender=gender, spo2=spo2, bpm=bpm, temp=temp, sbp=sbp, dbp=dbp, alert=alert)
-#         return JsonResponse({"success": True})
+def set_premium(request):
+    username = request.GET["username"]
+    value = request.GET["value"]
+    user = UserProfile.objects.get(username=username)
+    user.premium_plan = value
+    user.save()
+    return JsonResponse({"success": True})
 
-# def device_pull_data(request):
-#     current_record = DeviceRecords.objects.last()
-#     response_json = {
-#         "spo2": current_record.spo2,
-#         "bpm": current_record.bpm,
-#         "temp": current_record.temp,
-#         "sbp": current_record.sbp,
-#         "dbp": current_record.dbp,
-#         "alert": current_record.alert,
-#         "online": (datetime.datetime.now(datetime.timezone.utc) - current_record.timestamp).total_seconds() < 7
-#     }
-#     return JsonResponse(response_json)
 
-# def update(request):
-#     if request.method == "GET":
-#         config = Config.objects.all()[0]
-#         config.age = int(request.GET["age"])
-#         config.gender = int(request.GET["gender"])
-#         config.save()
-#         return JsonResponse({"success": True})
-#     if request.method == "POST":
-#         config = Config.objects.all()[0]
-#         config.age = int(request.POST["age"])
-#         config.gender = int(request.POST["gender"])
-#         config.save()
-#         return JsonResponse({"success": True})
+def is_premium(request):
+    username = request.GET["username"]
+    user = UserProfile.objects.get(username=username)
+    return JsonResponse({"value": user.premium_plan})
+
+
+def getBP(age, gender, spo2, bpm, temp):
+    if deployed_on_pythonanywhere:
+        pred = model.predict(tf.constant([[int(age), int(gender), int(spo2), int(bpm), float(temp)]]))
+        return pred[0][0], pred[0][1]
+    return random.randint(110, 130), random.randint(70, 90)
+
+
+def device_push_data(request):
+    config = Config.objects.all()[0]
+
+    age = config.age
+    gender = config.gender
+    spo2 = int(request.GET["spo2"])
+    bpm = int(request.GET["bpm"])
+    temp = float(request.GET["temp"])
+    sbp, dbp = getBP(age, gender, spo2, bpm, temp)
+
+    DeviceRecords.objects.create(age=age, gender=gender, spo2=spo2, bpm=bpm, temp=temp, sbp=sbp, dbp=dbp)
+    return JsonResponse({"success": True})
+
+
+
+
