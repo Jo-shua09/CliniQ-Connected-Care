@@ -11,9 +11,9 @@ deployed_on_pythonanywhere = False
 if os.getenv("PYTHONANYWHERE_DOMAIN") is not None:
     deployed_on_pythonanywhere = True
     global model
-    import keras
+    import tensorflow as tf
     model_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "model.keras")
-    model = keras.models.load_model(model_path)
+    model = tf.keras.models.load_model(model_path)
 
 
 
@@ -75,7 +75,7 @@ def get_connections(request):
 
     monitoring = []
     monitored_by = []
-    
+
     for conn in Connection.objects.filter(monitored=user):
         monitored_by.append({
             "username": conn.monitored_by.username,
