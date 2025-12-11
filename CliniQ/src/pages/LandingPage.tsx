@@ -92,6 +92,37 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Features */}
+      <section className="py-12 sm:py-20">
+        <div className="container px-4">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center">
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">Why Choose CliniQ?</h2>
+            <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground px-4">
+              Built for modern healthcare with security, accessibility, and user experience at the forefront
+            </p>
+          </motion.div>
+
+          <div className="mt-8 sm:mt-12 grid gap-4 sm:gap-8 md:grid-cols-3">
+            {features.map((feature, idx) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className="card-hover rounded-xl sm:rounded-2xl border border-border bg-card p-5 sm:p-8 text-center shadow-card"
+              >
+                <div className="mx-auto flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-primary/10">
+                  <feature.icon className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+                </div>
+                <h3 className="mt-4 sm:mt-5 font-heading text-lg sm:text-xl font-semibold text-foreground">{feature.title}</h3>
+                <p className="mt-2 text-sm sm:text-base text-muted-foreground">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
