@@ -1,11 +1,9 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from app.models import *
-import keras
 import random
 import os
 import datetime
-import tensorflow as tf
 from django.utils import timezone
 
 
@@ -13,6 +11,7 @@ deployed_on_pythonanywhere = False
 if os.getenv("PYTHONANYWHERE_DOMAIN") is not None:
     deployed_on_pythonanywhere = True
     global model
+    import keras
     model_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "model.keras")
     model = keras.models.load_model(model_path)
 
@@ -140,6 +139,7 @@ def is_premium(request):
 
 def getBP(age, gender, spo2, bpm, temp):
     if deployed_on_pythonanywhere:
+        import tensorflow as tf
         pred = model.predict(tf.constant([[int(age), int(gender), int(spo2), int(bpm), float(temp)]]))
         return pred[0][0], pred[0][1]
     return random.randint(110, 130), random.randint(70, 90)
