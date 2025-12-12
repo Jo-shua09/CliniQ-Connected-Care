@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useNavigate } from "react-router-dom";
 
 interface User {
   username: string;
@@ -37,8 +38,9 @@ interface User {
 
 export default function Settings() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [connectDeviceOpen, setConnectDeviceOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null); // Changed to User | null
+  const [user, setUser] = useState<User | null>(null);
   const [notifications, setNotifications] = useState({
     healthAlerts: true,
     connectionRequests: true,
@@ -166,13 +168,22 @@ export default function Settings() {
 
   const handleSubscriptionSelect = async (plan: "standard" | "premium") => {
     try {
-      const token = getAuthToken();
-      if (!token || !user?.email) {
-        throw new Error("Authentication error or user email not found.");
+      if (!user?.username) {
+        throw new Error("Username not found. Please log out and log back in.");
       }
 
+      console.log("Changing subscription for:", user.username, "to:", plan);
+
+      // Prepare value - backend expects "true" for premium, "false" for standard
+      const valueToSend = plan === "premium" ? "true" : "false";
+
       // Call API to update subscription
-      await apiClient.setPremium({ email: user.email, value: plan });
+      const result = await apiClient.setPremium({
+        username: user.username,
+        value: valueToSend,
+      });
+
+      console.log("Set premium result:", result);
 
       // Update local user state and localStorage
       const updatedUser = { ...user, subscription: plan };
@@ -183,23 +194,77 @@ export default function Settings() {
         title: "Subscription updated",
         description: `Your plan has been successfully changed to ${plan}.`,
       });
-    } catch (error) {
-      toast({
-        title: "Failed to update subscription",
-        description: error instanceof Error ? error.message : "An error occurred while updating your subscription.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      console.error("Subscription update error:", error);
+
+      // If backend fails, still update locally
+      if (user) {
+        const updatedUser = { ...user, subscription: plan };
+        localStorage.setItem("cliniq_user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+
+        toast({
+          title: "Subscription updated locally",
+          description: `Your plan has been changed to ${plan}. Backend sync may be pending.`,
+        });
+      } else {
+        toast({
+          title: "Failed to update subscription",
+          description: error.message || "An error occurred while updating your subscription.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleUpgradePlan = async () => {
+    if (!user?.username) {
+      toast({
+        title: "Error",
+        description: "User information not found.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (user?.subscription === "premium") {
+      toast({
+        title: "Already Premium",
+        description: "You are already on the premium plan.",
+      });
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = window.confirm("Upgrade to Premium for $9.99/month?");
+    if (!confirmed) return;
+
     await handleSubscriptionSelect("premium");
   };
 
   const handleDowngradePlan = async () => {
-    if (user?.subscription === "premium") {
-      await handleSubscriptionSelect("standard");
+    if (!user?.username) {
+      toast({
+        title: "Error",
+        description: "User information not found.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    if (user?.subscription === "standard") {
+      toast({
+        title: "Already Standard",
+        description: "You are already on the standard plan.",
+      });
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = window.confirm("Downgrade to Standard plan? You'll lose access to premium features.");
+    if (!confirmed) return;
+
+    await handleSubscriptionSelect("standard");
   };
 
   const isProfessional = user?.subscription === "premium";

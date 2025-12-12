@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Heart, Droplets, Thermometer, Wind, Activity, Zap, Crown } from "lucide-react";
 import { motion } from "framer-motion";
@@ -9,6 +9,7 @@ import { VitalCard } from "@/components/sections/VitalCard";
 import { ConnectDeviceModal } from "@/components/modals/ConnectDeviceModal";
 import { DeviceStatus } from "@/components/sections/DeviceStatus";
 import { HealthScore } from "@/components/sections/HealthScore";
+import { apiClient } from "@/lib/api";
 
 interface User {
   username: string;
@@ -59,6 +60,35 @@ export default function Dashboard() {
     };
 
     fetchUserProfile();
+  }, []);
+
+  const checkSubscriptionStatus = async () => {
+    try {
+      const storedUser = localStorage.getItem("cliniq_user");
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+
+        if (user.username) {
+          // Check if user has premium from backend
+          const result = await apiClient.isPremium({ username: user.username });
+
+          if (result.success) {
+            // Update local storage with correct subscription status
+            const updatedUser = { ...user, subscription: "premium" };
+            localStorage.setItem("cliniq_user", JSON.stringify(updatedUser));
+
+            // Update state if in Settings component
+            if (setUser) setUser(updatedUser);
+          }
+        }
+      }
+    } catch (error) {
+      console.log("Could not verify subscription status:", error);
+    }
+  };
+
+  useEffect(() => {
+    checkSubscriptionStatus();
   }, []);
 
   const standardVitalsData = useMemo(

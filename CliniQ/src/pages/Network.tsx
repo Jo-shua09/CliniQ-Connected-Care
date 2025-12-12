@@ -113,7 +113,7 @@ export default function Network() {
             contact: "",
             avatar: user.username.slice(0, 2).toUpperCase(),
             requestType: "Wants to monitor you",
-            requestedData: ["Vital Signs", "Diet Data", "Mental Health"],
+            requestedData: ["Vital Signs", "Diet Data"],
           }));
 
         // Process people I'm monitoring (accepted connections)
@@ -205,7 +205,7 @@ export default function Network() {
                     contact: "",
                     avatar: otherUsername.slice(0, 2).toUpperCase(),
                     requestType: "Wants to monitor you",
-                    requestedData: ["Vital Signs", "Diet Data", "Mental Health"],
+                    requestedData: ["Vital Signs", "Diet Data"],
                   });
                 }
               } else {
@@ -284,7 +284,7 @@ export default function Network() {
                     contact: "",
                     avatar: otherUsername.slice(0, 2).toUpperCase(),
                     requestType: "Wants to monitor you",
-                    requestedData: ["Vital Signs", "Diet Data", "Mental Health"],
+                    requestedData: ["Vital Signs", "Diet Data"],
                   });
                 } else if (conn.accepted) {
                   if (conn.monitored_by === user.username) {

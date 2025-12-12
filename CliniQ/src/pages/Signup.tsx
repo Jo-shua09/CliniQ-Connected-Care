@@ -53,50 +53,25 @@ export default function Signup() {
     setIsLoading(true);
 
     try {
-      console.log("Attempting signup with:", formData);
-
       // Prepare data
       const signupData = {
         username: formData.username.trim(),
         first_name: formData.first_name.trim(),
         surname: formData.surname.trim(),
         email: formData.email.trim().toLowerCase(),
-        phone_number: formData.phone_number.trim() || "", // Empty string if not provided
+        phone_number: formData.phone_number.trim() || "",
         age: formData.age.trim(),
         gender: formData.gender,
         password: formData.password,
       };
 
-      console.log("Sending signup request with data:", signupData);
+      console.log("Signing up with:", signupData);
 
-      // Try direct fetch to get better error information
-      const params = new URLSearchParams();
-      Object.entries(signupData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          params.append(key, value.toString());
-        }
-      });
+      // Use apiClient.signup instead of direct fetch
+      const signupResult = await apiClient.signup(signupData);
+      console.log("Signup result:", signupResult);
 
-      const url = `https://cliniq2.pythonanywhere.com/signup?${params.toString()}`;
-      console.log("Full URL:", url);
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log("Response status:", response.status, response.statusText);
-
-      const result = await response.json();
-      console.log("Response data:", result);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      if (result.success) {
+      if (signupResult.success) {
         // Store complete user data for subscription selection
         const tempUser = {
           username: signupData.username,
@@ -108,6 +83,7 @@ export default function Signup() {
           gender: signupData.gender,
           subscription: "standard" as const,
         };
+
         localStorage.setItem("cliniq_user_temp", JSON.stringify(tempUser));
 
         setIsLoading(false);
@@ -117,26 +93,10 @@ export default function Signup() {
           description: "Please select your subscription plan.",
         });
       } else {
-        // Check for common issues
-        let errorMessage = "Signup failed. Possible reasons:";
-
-        if (signupData.username.length < 3) {
-          errorMessage += "\n- Username too short (min 3 characters)";
-        }
-        if (signupData.password.length < 8) {
-          errorMessage += "\n- Password too short (min 8 characters)";
-        }
-        if (!signupData.email.includes("@")) {
-          errorMessage += "\n- Invalid email format";
-        }
-        if (isNaN(Number(signupData.age)) || Number(signupData.age) < 1) {
-          errorMessage += "\n- Invalid age";
-        }
-
-        throw new Error(errorMessage + "\n- Username or email may already exist");
+        throw new Error("Signup failed. Username or email may already exist.");
       }
     } catch (error: any) {
-      console.error("Signup error details:", error);
+      console.error("Signup error:", error);
       setIsLoading(false);
 
       let errorMessage = "An error occurred during signup";
@@ -160,105 +120,72 @@ export default function Signup() {
       }
 
       const tempUser = JSON.parse(tempUserStr);
-      console.log("Setting subscription for:", tempUser.username);
+      console.log("Setting subscription for:", tempUser.username, "Plan:", plan);
 
-      // Try different value formats - backend might expect different format
-      let valueToSend;
-
-      // Option 1: Try boolean string (what we're currently doing)
-      valueToSend = plan === "premium" ? "true" : "false";
-
-      console.log("Attempt 1 - Setting premium with boolean string:", { username: tempUser.username, value: valueToSend });
+      // Prepare value - backend expects "true" for premium, "false" for standard
+      const valueToSend = plan === "premium" ? "true" : "false";
 
       try {
-        await apiClient.setPremium({
+        // Use apiClient.setPremium instead of direct fetch
+        const result = await apiClient.setPremium({
           username: tempUser.username,
           value: valueToSend,
         });
-      } catch (error1) {
-        console.log("Attempt 1 failed:", error1);
 
-        // Option 2: Try plan name directly
-        valueToSend = plan; // "standard" or "premium"
-        console.log("Attempt 2 - Setting premium with plan name:", { username: tempUser.username, value: valueToSend });
+        console.log("Set premium result:", result);
 
-        try {
-          await apiClient.setPremium({
-            username: tempUser.username,
-            value: valueToSend,
-          });
-        } catch (error2) {
-          console.log("Attempt 2 failed:", error2);
-
-          // Option 3: Try "1" for premium, "0" for standard
-          valueToSend = plan === "premium" ? "1" : "0";
-          console.log("Attempt 3 - Setting premium with numeric string:", { username: tempUser.username, value: valueToSend });
-
-          try {
-            await apiClient.setPremium({
-              username: tempUser.username,
-              value: valueToSend,
-            });
-          } catch (error3) {
-            console.log("Attempt 3 failed:", error3);
-            throw new Error("Could not set subscription. The backend may not support this feature yet.");
-          }
+        if (!result.success) {
+          console.warn("Backend returned success: false, but continuing anyway");
         }
+
+        // Store final user data
+        const userWithSubscription = {
+          ...tempUser,
+          subscription: plan,
+        };
+
+        // Create simple token for auth
+        const token = `user_${tempUser.username}_${Date.now()}`;
+
+        localStorage.setItem("cliniq_user", JSON.stringify(userWithSubscription));
+        localStorage.setItem("auth_token", token);
+        localStorage.removeItem("cliniq_user_temp");
+
+        toast({
+          title: "Welcome to CliniQ!",
+          description: `Your ${plan === "premium" ? "Premium" : "Standard"} plan is now active.`,
+        });
+
+        // Navigate to dashboard
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 500);
+      } catch (error: any) {
+        console.error("Subscription API error:", error);
+
+        // If setPremium fails, we can still create the user locally
+        const userWithSubscription = {
+          ...tempUser,
+          subscription: plan,
+        };
+
+        const token = `user_${tempUser.username}_${Date.now()}`;
+
+        localStorage.setItem("cliniq_user", JSON.stringify(userWithSubscription));
+        localStorage.setItem("auth_token", token);
+        localStorage.removeItem("cliniq_user_temp");
+
+        toast({
+          title: "Account created!",
+          description: `Your account has been created with ${plan} plan. Subscription status may need verification.`,
+        });
+
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 500);
       }
-
-      // Store final user data
-      const userWithSubscription = {
-        ...tempUser,
-        subscription: plan,
-      };
-
-      // Create simple token for auth
-      const token = `user_${tempUser.username}_${Date.now()}`;
-
-      localStorage.setItem("cliniq_user", JSON.stringify(userWithSubscription));
-      localStorage.setItem("auth_token", token);
-      localStorage.removeItem("cliniq_user_temp");
-
-      toast({
-        title: "Welcome to CliniQ!",
-        description: `Your ${plan === "premium" ? "Premium" : "Standard"} plan is now active.`,
-      });
-
-      // Navigate to dashboard
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 500);
     } catch (error: any) {
       console.error("Subscription error:", error);
-
-      // Even if setPremium fails, we can still let the user continue with standard plan
-      if (error.message.includes("Could not set subscription")) {
-        const tempUserStr = localStorage.getItem("cliniq_user_temp");
-        if (tempUserStr) {
-          const tempUser = JSON.parse(tempUserStr);
-          const userWithSubscription = {
-            ...tempUser,
-            subscription: "standard", // Default to standard if premium fails
-          };
-
-          const token = `user_${tempUser.username}_${Date.now()}`;
-
-          localStorage.setItem("cliniq_user", JSON.stringify(userWithSubscription));
-          localStorage.setItem("auth_token", token);
-          localStorage.removeItem("cliniq_user_temp");
-
-          toast({
-            title: "Account created!",
-            description: "Your account has been created with Standard plan. You can upgrade later in settings.",
-          });
-
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 500);
-          return;
-        }
-      }
-
       toast({
         title: "Subscription failed",
         description: error.message || "Could not set subscription. Please try again.",
@@ -297,6 +224,7 @@ export default function Signup() {
           </div>
         </motion.div>
       </div>
+
       {/* Right Side - Form */}
       <div className="flex w-full flex-col justify-center py-2 px-4 sm:px-8 lg:w-1/2 lg:px-10">
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="mx-auto w-full max-w-xl">
