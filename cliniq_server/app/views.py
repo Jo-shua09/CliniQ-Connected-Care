@@ -57,10 +57,10 @@ def login(request):
 
 def create_connection(request):
     monitored_username = request.GET["monitored"]
-    monitored_username = request.GET["monitored_by"]
+    monitored_by_username = request.GET["monitored_by"]
 
     monitored = UserProfile.objects.get(username=monitored_username)
-    monitored_by = UserProfile.objects.get(username=monitored_username)
+    monitored_by = UserProfile.objects.get(username=monitored_by_username)
 
     if not Connection.objects.filter(monitored=monitored, monitored_by=monitored_by).exists():
         Connection.objects.create(
@@ -207,7 +207,6 @@ def get_vitals(request):
         "ecg_sensor_frame": list(record.ecg_sensor_frame),
         "time_diff_seconds": seconds_diff,
     })
-
 
 
 
