@@ -32,7 +32,6 @@ response
     - age
     - gender
     - diet_summary
-    - mental_health_summary
 
 
 /create_connection

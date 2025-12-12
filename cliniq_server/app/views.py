@@ -26,11 +26,12 @@ def signup(request):
     first_name = request.GET["first_name"]
     username = request.GET["username"]
     password = request.GET["password"]
+    phone_number = request.GET["phone_number"]
     email = request.GET["email"]
     age = request.GET["age"]
     gender = request.GET["gender"]
 
-    if UserProfile.objects.filter(username=username).exists():
+    if not UserProfile.objects.filter(username=username).exists():
         UserProfile.objects.create(
             surname=surname,
             first_name=first_name,
@@ -38,7 +39,8 @@ def signup(request):
             password=password,
             email=email,
             age=age,
-            gender=gender
+            gender=gender.lower(),
+            phone_number=phone_number
         )
         return JsonResponse({"success": True})
     return JsonResponse({"success": False})
@@ -55,10 +57,10 @@ def login(request):
 
 def create_connection(request):
     monitored_username = request.GET["monitored"]
-    monitored_username = request.GET["monitored_by"]
+    monitored_by_username = request.GET["monitored_by"]
 
     monitored = UserProfile.objects.get(username=monitored_username)
-    monitored_by = UserProfile.objects.get(username=monitored_username)
+    monitored_by = UserProfile.objects.get(username=monitored_by_username)
 
     if not Connection.objects.filter(monitored=monitored, monitored_by=monitored_by).exists():
         Connection.objects.create(
@@ -158,6 +160,53 @@ def device_push_data(request):
     DeviceRecords.objects.create(age=age, gender=gender, spo2=spo2, bpm=bpm, temp=temp, sbp=sbp, dbp=dbp)
     return JsonResponse({"success": True})
 
+def user_profile(request):
+    username = request.GET["username"]
+    user = UserProfile.objects.get(username=username)
+    return JsonResponse({
+        "surname": user.surname,
+        "first_name": user.first_name,
+        "username": user.username,
+        "email": user.email,
+        "age": user.age,
+        "gender": user.gender,
+        "premium_plan": user.premium_plan,
+        "device_id": user.device_id,
+    })
+
+def user_profiles(request):
+    users = []
+    for user in UserProfile.objects.all():
+        users.append({
+            "surname": user.surname,
+            "first_name": user.first_name,
+            "username": user.username,
+            "email": user.email,
+            "age": user.age,
+            "gender": user.gender,
+            "premium_plan": user.premium_plan,
+            "device_id": user.device_id,
+        })
+    return JsonResponse({"users": users})
+
+def get_vitals(request):
+    username = request.GET["username"]
+    if username.device_id != "56781234":
+        return JsonResponse({"has_vitals": False})
+    
+    record = DeviceRecords.objects.last()
+    time_diff = timezone.now() - record.timestamp
+    seconds_diff = time_diff.total_seconds()
+    return JsonResponse({
+        "has_vitals": True,
+        "temp": record.temp,
+        "heart_rate": record.heart_rate,
+        "blood_oxygen": record.blood_oxygen,
+        "sbp": record.sbp,
+        "dbp": record.dbp,
+        "ecg_sensor_frame": list(record.ecg_sensor_frame),
+        "time_diff_seconds": seconds_diff,
+    })
 
 
 

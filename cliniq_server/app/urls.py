@@ -15,4 +15,7 @@ urlpatterns = [
     path("set_premium", views.set_premium),
     path("is_premium", views.is_premium),
     path("device_push", views.device_push_data),
+    path("user_profile", views.user_profile),
+    path("user_profiles", views.user_profiles),
+    path("has_vitals", views.get_vitals)
 ]
