@@ -77,7 +77,7 @@ export default function Signup() {
         }
       });
 
-      const url = `http://cliniq2.pythonanywhere.com/signup?${params.toString()}`;
+      const url = `https://cliniq2.pythonanywhere.com/signup?${params.toString()}`;
       console.log("Full URL:", url);
 
       const response = await fetch(url, {

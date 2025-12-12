@@ -61,7 +61,6 @@ export default function Dashboard() {
     fetchUserProfile();
   }, []);
 
-  // Memoized data - only define after loading check
   const standardVitalsData = useMemo(
     () => [
       {
@@ -144,7 +143,6 @@ export default function Dashboard() {
     [deviceConnected]
   );
 
-  // If still loading, show loading state
   if (loading) {
     return (
       <AppLayout>
@@ -158,7 +156,6 @@ export default function Dashboard() {
     );
   }
 
-  // If no user data at all, show error (should have redirected already)
   if (!user) {
     return (
       <AppLayout>
