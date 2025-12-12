@@ -1,0 +1,93 @@
+/signup
+request
+    - username
+    - surname
+    - first_name
+    - password
+    - email
+    - phone_number
+    - age
+    - gender
+response
+    - success: BooleanField
+
+
+/login
+request
+    - username
+    - password
+response
+    - success
+
+
+/user_profile
+request
+    - username
+response
+    - email
+    - premium_plan
+    - phone_number
+    - surname
+    - first_name
+    - age
+    - gender
+    - diet_summary
+    - mental_health_summary
+
+
+/create_connection
+request
+    - monitored (the person sending request)
+    - monitored_by
+response
+    - success
+
+
+/get_connections
+request
+    - username
+response
+    - monitored (list contains username, email, id)
+    - monitored_by --
+
+
+/accept_connection
+request
+    - id
+response
+    - success
+
+/cancel_connection
+request
+    -id
+response
+    -success
+
+/set_device_id
+request
+    - username
+    - device_id
+response
+    - success
+
+
+/has_device
+request
+    - username
+response
+    - success
+
+
+/set_premium
+request
+    - username
+    - value
+response
+    - success
+
+
+/is_premium
+request
+    - username
+response
+    - success
