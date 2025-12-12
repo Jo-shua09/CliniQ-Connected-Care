@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Eye, EyeOff, Heart, Lock, Mail, Phone, User, Users } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { apiClient, setAuthToken } from "@/lib/api";
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -50,25 +51,63 @@ export default function Signup() {
 
     setIsLoading(true);
 
-    // Simulate signup
-    setTimeout(() => {
+    try {
+      const signupData = {
+        username: formData.username,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        age: formData.age,
+        gender: formData.gender,
+        password: formData.password,
+      };
+
+      const response = await apiClient.signup(signupData);
+
+      // Store auth token and user data temporarily
+      setAuthToken(response.token);
+      localStorage.setItem("cliniq_user_temp", JSON.stringify(response.user));
+
       setIsLoading(false);
       setShowSubscriptionModal(true);
-    }, 1000);
+    } catch (error) {
+      setIsLoading(false);
+      toast({
+        title: "Signup failed",
+        description: error instanceof Error ? error.message : "An error occurred during signup",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSubscriptionSelect = (plan: "standard" | "premium") => {
-    const userData = {
-      ...formData,
-      subscription: plan,
-    };
-    localStorage.setItem("cliniq_user", JSON.stringify(userData));
+  const handleSubscriptionSelect = async (plan: "standard" | "premium") => {
+    try {
+      const tempUser = JSON.parse(localStorage.getItem("cliniq_user_temp") || "{}");
+      if (!tempUser.email) {
+        throw new Error("No user data found");
+      }
 
-    toast({
-      title: "Account created!",
-      description: `Welcome to CliniQ with ${plan === "premium" ? "premium" : "Standard"} plan.`,
-    });
-    navigate("/dashboard");
+      // Set premium status using API
+      await apiClient.setPremium({ email: tempUser.email, value: plan });
+
+      // Store user data with selected subscription
+      const userWithSubscription = { ...tempUser, subscription: plan };
+      localStorage.setItem("cliniq_user", JSON.stringify(userWithSubscription));
+      localStorage.removeItem("cliniq_user_temp"); // Clean up temp data
+
+      toast({
+        title: "Account created!",
+        description: `Welcome to CliniQ with ${plan === "premium" ? "Premium" : "Standard"} plan.`,
+      });
+      navigate("/dashboard");
+    } catch (error) {
+      toast({
+        title: "Failed to set subscription",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

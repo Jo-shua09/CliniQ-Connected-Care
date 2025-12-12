@@ -7,6 +7,7 @@ import { ArrowRight, Eye, EyeOff, Heart, Lock, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { apiClient, setAuthToken } from "@/lib/api";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -30,39 +31,30 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Check localStorage for existing user
-    const storedUser = localStorage.getItem("cliniq_user");
+    try {
+      const response = await apiClient.login({
+        username: email, // Using email field as username for now
+        password,
+      });
 
-    setTimeout(() => {
+      // Store auth token and user data
+      setAuthToken(response.token);
+      localStorage.setItem("cliniq_user", JSON.stringify(response.user));
+
+      toast({
+        title: "Welcome back!",
+        description: `Logged in as ${response.user.firstName} with ${response.user.subscription} plan.`,
+      });
+      navigate("/dashboard");
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "An error occurred during login",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        toast({
-          title: "Welcome back!",
-          description: `Logged in as ${userData.firstName} with ${userData.subscription} plan.`,
-        });
-        navigate("/dashboard");
-      } else {
-        // Default user for demo purposes while the BE is in development
-        const defaultUser = {
-          username: "johndoe",
-          firstName: "John",
-          lastName: "Doe",
-          email: email,
-          age: 30,
-          gender: "male",
-          phone: "123-456-7890",
-          subscription: "standard",
-        };
-        localStorage.setItem("cliniq_user", JSON.stringify(defaultUser));
-        toast({
-          title: "Welcome!",
-          description: "You've been logged in with Standard plan.",
-        });
-        navigate("/dashboard");
-      }
-    }, 1000);
+    }
   };
 
   return (

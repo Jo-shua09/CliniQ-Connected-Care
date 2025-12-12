@@ -7,6 +7,7 @@ import { Button } from "../ui/button";
 interface SubscriptionModalProps {
   open: boolean;
   onSelect: (plan: "standard" | "premium") => void;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const plans = [

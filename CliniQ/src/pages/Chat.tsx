@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { LogVitalsModal } from "@/components/modals/LogVitalsModal";
 import { motion } from "framer-motion";
-import { Send, Paperclip, Plus, Bot, Volume2, Activity } from "lucide-react";
+import { Send, Paperclip, Plus, Bot, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -26,7 +25,7 @@ const initialMessages: Message[] = [
     id: 1,
     role: "assistant",
     content: "Hello! How are you feeling today?",
-    timestamp: "10:19 PM",
+    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   },
 ];
 
@@ -34,13 +33,12 @@ export default function Chat() {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
-  const [logVitalsOpen, setLogVitalsOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("CliniQ_user");
+    const storedUser = localStorage.getItem("cliniq_user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }

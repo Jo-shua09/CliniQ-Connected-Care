@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AddConnectionModal } from "@/components/modals/AddConnectionModal";
 import { PendingRequestModal } from "@/components/modals/PendingRequestModal";
@@ -11,116 +11,184 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { apiClient, getAuthToken, PendingRequest } from "@/lib/api";
 
-const initialMonitoringPeople = [
-  {
-    id: 1,
-    name: "Mary Johnson",
-    email: "Mary@gmail.com",
-    gender: "Female",
-    contact: "555-1234",
-    avatar: "MJ",
-    lastUpdate: "5 mins ago",
-    status: "normal",
-    vitalSigns: {
-      heartRate: 72,
-      oxygenLevel: 95,
-      bloodSugar: 98,
-      temperature: 98.6,
-    },
-    dietData: {},
-  },
-  {
-    id: 2,
-    name: "Robert Doe",
-    email: "Robert@gmail.com",
-    gender: "Male",
-    contact: "555-1234",
-    avatar: "RD",
-    lastUpdate: "1 hour ago",
-    status: "warning",
-    vitalSigns: {
-      heartRate: 88,
-      oxygenLevel: 89,
-      bloodSugar: 150,
-      temperature: 100.4,
-    },
-    dietData: {},
-  },
-];
+// Types for UI
+interface MonitoringPerson {
+  id: number;
+  name: string;
+  email: string;
+  gender: string;
+  contact: string;
+  avatar: string;
+  lastUpdate: string;
+  status: string;
+  vitalSigns: {
+    heartRate: number;
+    oxygenLevel: number;
+    bloodSugar: number;
+    temperature: number;
+  };
+  dietData: Record<string, unknown>;
+}
 
-const initialMonitoringMe = [
-  {
-    id: 1,
-    name: "Sarah Williams",
-    email: "williams@gmail.com",
-    gender: "Female",
-    contact: "555-1234",
-    avatar: "SW",
-    permissions: ["Vital Signs", "Diet Data"],
-  },
-];
-
-const initialPendingRequests = [
-  {
-    id: 1,
-    name: "Emily Davis",
-    email: "Emily@gmail.com",
-    gender: "Male",
-    contact: "555-1234",
-    avatar: "ED",
-    requestType: "wants to monitor you",
-    requestedData: ["Vital Signs", "Diet Data"],
-  },
-];
+interface MonitoringMePerson {
+  id: number;
+  name: string;
+  email: string;
+  gender: string;
+  contact: string;
+  avatar: string;
+  permissions: string[];
+}
 
 export default function Network() {
   const { toast } = useToast();
   const [addConnectionOpen, setAddConnectionOpen] = useState(false);
   const [pendingRequestModalOpen, setPendingRequestModalOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<(typeof initialPendingRequests)[0] | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<PendingRequest | null>(null);
   const [userProfileModalOpen, setUserProfileModalOpen] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<(typeof initialMonitoringPeople)[0] | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<MonitoringPerson | null>(null);
   const [editPermissionsModalOpen, setEditPermissionsModalOpen] = useState(false);
-  const [selectedMonitoringPerson, setSelectedMonitoringPerson] = useState<(typeof initialMonitoringMe)[0] | null>(null);
-  const [monitoringPeople, setMonitoringPeople] = useState(initialMonitoringPeople);
-  const [monitoringMe, setMonitoringMe] = useState(initialMonitoringMe);
-  const [pendingRequests, setPendingRequests] = useState(initialPendingRequests);
+  const [selectedMonitoringPerson, setSelectedMonitoringPerson] = useState<MonitoringMePerson | null>(null);
+  const [monitoringPeople, setMonitoringPeople] = useState<MonitoringPerson[]>([]);
+  const [monitoringMe, setMonitoringMe] = useState<MonitoringMePerson[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const handleAcceptRequest = (id: number, selectedPermissions: string[]) => {
-    const request = pendingRequests.find((r) => r.id === id);
-    if (request) {
-      setMonitoringMe([
-        ...monitoringMe,
-        {
-          id: Date.now(),
-          name: request.name,
-          email: request.email,
-          gender: request.gender,
-          contact: request.contact,
-          avatar: request.avatar,
-          permissions: selectedPermissions,
-        },
-      ]);
-      setPendingRequests(pendingRequests.filter((r) => r.id !== id));
+  useEffect(() => {
+    const fetchConnections = async () => {
+      try {
+        const token = getAuthToken();
+        const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
+        if (!token || !user.username) {
+          setLoading(false);
+          return;
+        }
+
+        const response = await apiClient.getConnections(token, user.username);
+
+        // Map monitored to monitoringPeople
+        const mappedMonitoringPeople: MonitoringPerson[] = response.monitored.map((person) => ({
+          id: person.id,
+          name: person.username,
+          email: person.email,
+          gender: "Unknown", // API doesn't provide
+          contact: "", // API doesn't provide
+          avatar: person.username.slice(0, 2).toUpperCase(),
+          lastUpdate: "Just now", // Default
+          status: "normal", // Default
+          vitalSigns: {
+            heartRate: 0, // Will be fetched separately or set to 0
+            oxygenLevel: 0,
+            bloodSugar: 0,
+            temperature: 0,
+          },
+          dietData: {},
+        }));
+
+        // Map monitored_by to monitoringMe
+        const mappedMonitoringMe: MonitoringMePerson[] = response.monitored_by.map((person) => ({
+          id: person.id,
+          name: person.username,
+          email: person.email,
+          gender: "Unknown",
+          contact: "",
+          avatar: person.username.slice(0, 2).toUpperCase(),
+          permissions: ["Vital Signs", "Diet Data"], // Default permissions
+        }));
+
+        setMonitoringPeople(mappedMonitoringPeople);
+        setMonitoringMe(mappedMonitoringMe);
+        setPendingRequests(response.pending_requests);
+      } catch (error) {
+        toast({
+          title: "Error loading connections",
+          description: error instanceof Error ? error.message : "Failed to load connections",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConnections();
+  }, [toast]);
+
+  const handleAcceptRequest = async (id: number, selectedPermissions: string[]) => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Authentication error",
+          description: "Please log in again",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await apiClient.acceptConnection(token, { id });
+
+      const request = pendingRequests.find((r) => r.id === id);
+      if (request) {
+        setMonitoringMe([
+          ...monitoringMe,
+          {
+            id: Date.now(),
+            name: request.name,
+            email: request.email,
+            gender: request.gender,
+            contact: request.contact,
+            avatar: request.avatar,
+            permissions: selectedPermissions,
+          },
+        ]);
+        setPendingRequests(pendingRequests.filter((r) => r.id !== id));
+        toast({
+          title: "Request accepted",
+          description: `${request.name} can now monitor your selected health data.`,
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Request accepted",
-        description: `${request.name} can now monitor your selected health data.`,
+        title: "Error accepting request",
+        description: error instanceof Error ? error.message : "Failed to accept request",
+        variant: "destructive",
       });
     }
   };
 
-  const handleDenyRequest = (id: number) => {
-    const request = pendingRequests.find((r) => r.id === id);
-    setPendingRequests(pendingRequests.filter((r) => r.id !== id));
-    toast({
-      title: "Request denied",
-      description: request ? `Connection request from ${request.name} has been denied.` : "Request denied.",
-    });
+  const handleDenyRequest = async (id: number) => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Authentication error",
+          description: "Please log in again",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await apiClient.cancelConnection(token, { id });
+
+      const request = pendingRequests.find((r) => r.id === id);
+      setPendingRequests(pendingRequests.filter((r) => r.id !== id));
+      toast({
+        title: "Request denied",
+        description: request ? `Connection request from ${request.name} has been denied.` : "Request denied.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error denying request",
+        description: error instanceof Error ? error.message : "Failed to deny request",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleRequestClick = (request: (typeof initialPendingRequests)[0]) => {
+  const handleRequestClick = (request: PendingRequest) => {
     setSelectedRequest(request);
     setPendingRequestModalOpen(true);
   };
@@ -143,12 +211,12 @@ export default function Network() {
     }
   };
 
-  const handlePersonClick = (person: (typeof initialMonitoringPeople)[0]) => {
+  const handlePersonClick = (person: MonitoringPerson) => {
     setSelectedPerson(person);
     setUserProfileModalOpen(true);
   };
 
-  const handleEditPermissions = (person: (typeof initialMonitoringMe)[0]) => {
+  const handleEditPermissions = (person: MonitoringMePerson) => {
     setSelectedMonitoringPerson(person);
     setEditPermissionsModalOpen(true);
   };
