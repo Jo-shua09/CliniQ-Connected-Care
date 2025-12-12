@@ -23,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
+import { ConnectDeviceModal } from "@/components/modals/ConnectDeviceModal";
 
 interface User {
   username: string;
@@ -613,7 +614,7 @@ export default function Settings() {
       </div>
 
       {/* Modals */}
-      <SubscriptionModal open={connectDeviceOpen} onOpenChange={setConnectDeviceOpen} onSelect={handleSubscriptionSelect} />
+      <ConnectDeviceModal open={connectDeviceOpen} onOpenChange={setConnectDeviceOpen} />
     </AppLayout>
   );
 }

@@ -91,6 +91,30 @@ export default function Dashboard() {
     checkSubscriptionStatus();
   }, []);
 
+  // useEffect to check device status when component loads
+  useEffect(() => {
+    const checkDeviceStatus = async () => {
+      try {
+        const storedUser = localStorage.getItem("cliniq_user");
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+
+          // Check if user has a device connected via API
+          const hasDeviceResponse = await apiClient.hasDevice({ username: user.username });
+
+          // Also check locally stored device_id as fallback
+          if (hasDeviceResponse.success || user.device_id) {
+            setDeviceConnected(true);
+          }
+        }
+      } catch (error) {
+        console.log("Could not verify device status:", error);
+      }
+    };
+
+    checkDeviceStatus();
+  }, []);
+
   const standardVitalsData = useMemo(
     () => [
       {
@@ -327,7 +351,7 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Modals */}
-      <ConnectDeviceModal open={connectDeviceOpen} onOpenChange={setConnectDeviceOpen} />
+      <ConnectDeviceModal open={connectDeviceOpen} onOpenChange={setConnectDeviceOpen} onDeviceConnected={() => setDeviceConnected(true)} />
     </AppLayout>
   );
 }
