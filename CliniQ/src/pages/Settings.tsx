@@ -60,25 +60,28 @@ export default function Settings() {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const token = getAuthToken();
-        if (token) {
-          const userProfile = await apiClient.getUserProfile(token);
-          setUser(userProfile);
-          setFormData({
-            username: userProfile.username || "",
-            first_name: userProfile.first_name || "",
-            surname: userProfile.surname || "",
-            email: userProfile.email || "",
-            phone_number: userProfile.phone_number || "",
-            age: userProfile.age || "",
-            gender: userProfile.gender || "",
-            password: userProfile.password || "",
-          });
-        } else {
-          // Fallback to localStorage if no token
-          const storedUser = localStorage.getItem("cliniq_user");
-          if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
+        // First get stored user to extract username
+        const storedUser = localStorage.getItem("cliniq_user");
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          const username = parsedUser.username;
+
+          if (username) {
+            // Fetch fresh profile from API using username
+            const userProfile = await apiClient.getUserProfile(username);
+            setUser(userProfile);
+            setFormData({
+              username: userProfile.username || "",
+              first_name: userProfile.first_name || "",
+              surname: userProfile.surname || "",
+              email: userProfile.email || "",
+              phone_number: userProfile.phone_number || "",
+              age: userProfile.age || "",
+              gender: userProfile.gender || "",
+              password: userProfile.password || "",
+            });
+          } else {
+            // Use stored data if no username
             setUser(parsedUser);
             setFormData({
               username: parsedUser.username || "",
@@ -88,7 +91,7 @@ export default function Settings() {
               phone_number: parsedUser.phone_number || parsedUser.phone || "",
               age: parsedUser.age || "",
               gender: parsedUser.gender || "",
-              password: parsedUser.password || "", // Set password from parsedUser
+              password: parsedUser.password || "",
             });
           }
         }
@@ -107,7 +110,7 @@ export default function Settings() {
             phone_number: parsedUser.phone_number || parsedUser.phone || "",
             age: parsedUser.age || "",
             gender: parsedUser.gender || "",
-            password: parsedUser.password || "", // Set password from parsedUser
+            password: parsedUser.password || "",
           });
         }
       }
@@ -126,12 +129,11 @@ export default function Settings() {
 
   const handleSaveProfile = async () => {
     try {
-      const token = getAuthToken();
-      if (!token) {
-        throw new Error("No authentication token found");
+      if (!user?.username) {
+        throw new Error("Username not found");
       }
 
-      const updatedUser = await apiClient.updateUserProfile(token, formData); // Pass formData directly
+      const updatedUser = await apiClient.updateUserProfile(formData); // Pass formData directly
       setUser({ ...updatedUser, password: formData.password });
       toast({
         title: "Profile updated",

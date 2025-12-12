@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Eye, EyeOff, Heart, Lock, Mail, Phone, User, Users } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiClient, setAuthToken } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -40,6 +40,7 @@ export default function Signup() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!acceptTerms) {
       toast({
         title: "Terms Required",
@@ -52,44 +53,100 @@ export default function Signup() {
     setIsLoading(true);
 
     try {
+      console.log("Attempting signup with:", formData);
+
+      // Prepare data
       const signupData = {
-        username: formData.username,
-        first_name: formData.first_name,
-        surname: formData.surname,
-        email: formData.email,
-        phone_number: formData.phone_number,
-        age: formData.age,
+        username: formData.username.trim(),
+        first_name: formData.first_name.trim(),
+        surname: formData.surname.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone_number: formData.phone_number.trim() || "", // Empty string if not provided
+        age: formData.age.trim(),
         gender: formData.gender,
         password: formData.password,
       };
 
-      const response = await apiClient.signup(signupData);
+      console.log("Sending signup request with data:", signupData);
 
-      // Since signup only returns {success: boolean}, we need to handle differently
-      if (response.success) {
-        // Store user data temporarily for subscription selection
+      // Try direct fetch to get better error information
+      const params = new URLSearchParams();
+      Object.entries(signupData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, value.toString());
+        }
+      });
+
+      const url = `http://cliniq2.pythonanywhere.com/signup?${params.toString()}`;
+      console.log("Full URL:", url);
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("Response status:", response.status, response.statusText);
+
+      const result = await response.json();
+      console.log("Response data:", result);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      if (result.success) {
+        // Store complete user data for subscription selection
         const tempUser = {
-          username: formData.username,
-          first_name: formData.first_name,
-          surname: formData.surname,
-          email: formData.email,
-          phone_number: formData.phone_number,
-          age: formData.age,
-          gender: formData.gender,
-          subscription: "standard" as const, // default
+          username: signupData.username,
+          first_name: signupData.first_name,
+          surname: signupData.surname,
+          email: signupData.email,
+          phone_number: signupData.phone_number,
+          age: signupData.age,
+          gender: signupData.gender,
+          subscription: "standard" as const,
         };
         localStorage.setItem("cliniq_user_temp", JSON.stringify(tempUser));
 
         setIsLoading(false);
         setShowSubscriptionModal(true);
+        toast({
+          title: "Account created successfully!",
+          description: "Please select your subscription plan.",
+        });
       } else {
-        throw new Error("Signup failed");
+        // Check for common issues
+        let errorMessage = "Signup failed. Possible reasons:";
+
+        if (signupData.username.length < 3) {
+          errorMessage += "\n- Username too short (min 3 characters)";
+        }
+        if (signupData.password.length < 8) {
+          errorMessage += "\n- Password too short (min 8 characters)";
+        }
+        if (!signupData.email.includes("@")) {
+          errorMessage += "\n- Invalid email format";
+        }
+        if (isNaN(Number(signupData.age)) || Number(signupData.age) < 1) {
+          errorMessage += "\n- Invalid age";
+        }
+
+        throw new Error(errorMessage + "\n- Username or email may already exist");
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Signup error details:", error);
       setIsLoading(false);
+
+      let errorMessage = "An error occurred during signup";
+      if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Signup failed",
-        description: error instanceof Error ? error.message : "An error occurred during signup",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -97,28 +154,114 @@ export default function Signup() {
 
   const handleSubscriptionSelect = async (plan: "standard" | "premium") => {
     try {
-      const tempUser = JSON.parse(localStorage.getItem("cliniq_user_temp") || "{}");
-      if (!tempUser.email) {
-        throw new Error("No user data found");
+      const tempUserStr = localStorage.getItem("cliniq_user_temp");
+      if (!tempUserStr) {
+        throw new Error("No user data found. Please sign up again.");
       }
 
-      // Set premium status using API
-      await apiClient.setPremium({ email: tempUser.email, value: plan });
+      const tempUser = JSON.parse(tempUserStr);
+      console.log("Setting subscription for:", tempUser.username);
 
-      // Store user data with selected subscription
-      const userWithSubscription = { ...tempUser, subscription: plan };
+      // Try different value formats - backend might expect different format
+      let valueToSend;
+
+      // Option 1: Try boolean string (what we're currently doing)
+      valueToSend = plan === "premium" ? "true" : "false";
+
+      console.log("Attempt 1 - Setting premium with boolean string:", { username: tempUser.username, value: valueToSend });
+
+      try {
+        await apiClient.setPremium({
+          username: tempUser.username,
+          value: valueToSend,
+        });
+      } catch (error1) {
+        console.log("Attempt 1 failed:", error1);
+
+        // Option 2: Try plan name directly
+        valueToSend = plan; // "standard" or "premium"
+        console.log("Attempt 2 - Setting premium with plan name:", { username: tempUser.username, value: valueToSend });
+
+        try {
+          await apiClient.setPremium({
+            username: tempUser.username,
+            value: valueToSend,
+          });
+        } catch (error2) {
+          console.log("Attempt 2 failed:", error2);
+
+          // Option 3: Try "1" for premium, "0" for standard
+          valueToSend = plan === "premium" ? "1" : "0";
+          console.log("Attempt 3 - Setting premium with numeric string:", { username: tempUser.username, value: valueToSend });
+
+          try {
+            await apiClient.setPremium({
+              username: tempUser.username,
+              value: valueToSend,
+            });
+          } catch (error3) {
+            console.log("Attempt 3 failed:", error3);
+            throw new Error("Could not set subscription. The backend may not support this feature yet.");
+          }
+        }
+      }
+
+      // Store final user data
+      const userWithSubscription = {
+        ...tempUser,
+        subscription: plan,
+      };
+
+      // Create simple token for auth
+      const token = `user_${tempUser.username}_${Date.now()}`;
+
       localStorage.setItem("cliniq_user", JSON.stringify(userWithSubscription));
-      localStorage.removeItem("cliniq_user_temp"); // Clean up temp data
+      localStorage.setItem("auth_token", token);
+      localStorage.removeItem("cliniq_user_temp");
 
       toast({
-        title: "Account created!",
-        description: `Welcome to CliniQ with ${plan === "premium" ? "Premium" : "Standard"} plan.`,
+        title: "Welcome to CliniQ!",
+        description: `Your ${plan === "premium" ? "Premium" : "Standard"} plan is now active.`,
       });
-      navigate("/dashboard");
-    } catch (error) {
+
+      // Navigate to dashboard
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500);
+    } catch (error: any) {
+      console.error("Subscription error:", error);
+
+      // Even if setPremium fails, we can still let the user continue with standard plan
+      if (error.message.includes("Could not set subscription")) {
+        const tempUserStr = localStorage.getItem("cliniq_user_temp");
+        if (tempUserStr) {
+          const tempUser = JSON.parse(tempUserStr);
+          const userWithSubscription = {
+            ...tempUser,
+            subscription: "standard", // Default to standard if premium fails
+          };
+
+          const token = `user_${tempUser.username}_${Date.now()}`;
+
+          localStorage.setItem("cliniq_user", JSON.stringify(userWithSubscription));
+          localStorage.setItem("auth_token", token);
+          localStorage.removeItem("cliniq_user_temp");
+
+          toast({
+            title: "Account created!",
+            description: "Your account has been created with Standard plan. You can upgrade later in settings.",
+          });
+
+          setTimeout(() => {
+            navigate("/dashboard");
+          }, 500);
+          return;
+        }
+      }
+
       toast({
-        title: "Failed to set subscription",
-        description: error instanceof Error ? error.message : "An error occurred",
+        title: "Subscription failed",
+        description: error.message || "Could not set subscription. Please try again.",
         variant: "destructive",
       });
     }
@@ -154,7 +297,6 @@ export default function Signup() {
           </div>
         </motion.div>
       </div>
-
       {/* Right Side - Form */}
       <div className="flex w-full flex-col justify-center py-2 px-4 sm:px-8 lg:w-1/2 lg:px-10">
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="mx-auto w-full max-w-xl">
