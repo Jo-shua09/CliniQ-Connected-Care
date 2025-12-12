@@ -39,3 +39,5 @@ class UserProfile(models.Model):
     mental_health_summary = models.TextField(blank=True, null=True)
     model_context = models.TextField(blank=True, null=True)
     premium_plan = models.BooleanField(default=False)
+    def __str__(self):
+        return str(self.username)

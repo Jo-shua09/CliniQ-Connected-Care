@@ -26,11 +26,12 @@ def signup(request):
     first_name = request.GET["first_name"]
     username = request.GET["username"]
     password = request.GET["password"]
+    phone_number = request.GET["phone_number"]
     email = request.GET["email"]
     age = request.GET["age"]
     gender = request.GET["gender"]
 
-    if UserProfile.objects.filter(username=username).exists():
+    if not UserProfile.objects.filter(username=username).exists():
         UserProfile.objects.create(
             surname=surname,
             first_name=first_name,
@@ -38,7 +39,8 @@ def signup(request):
             password=password,
             email=email,
             age=age,
-            gender=gender
+            gender=gender.lower(),
+            phone_number=phone_number
         )
         return JsonResponse({"success": True})
     return JsonResponse({"success": False})
