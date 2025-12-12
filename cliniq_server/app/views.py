@@ -158,6 +158,54 @@ def device_push_data(request):
     DeviceRecords.objects.create(age=age, gender=gender, spo2=spo2, bpm=bpm, temp=temp, sbp=sbp, dbp=dbp)
     return JsonResponse({"success": True})
 
+def user_profile(request):
+    username = request.GET["username"]
+    user = UserProfile.objects.get(username=username)
+    return JsonResponse({
+        "surname": user.surname,
+        "first_name": user.first_name,
+        "username": user.username,
+        "email": user.email,
+        "age": user.age,
+        "gender": user.gender,
+        "premium_plan": user.premium_plan,
+        "device_id": user.device_id,
+    })
+
+def user_profiles(request):
+    users = []
+    for user in UserProfile.objects.all():
+        users.append({
+            "surname": user.surname,
+            "first_name": user.first_name,
+            "username": user.username,
+            "email": user.email,
+            "age": user.age,
+            "gender": user.gender,
+            "premium_plan": user.premium_plan,
+            "device_id": user.device_id,
+        })
+    return JsonResponse({"users": users})
+
+def get_vitals(request):
+    username = request.GET["username"]
+    if username.device_id != "56781234":
+        return JsonResponse({"has_vitals": False})
+    
+    record = DeviceRecords.objects.last()
+    time_diff = timezone.now() - record.timestamp
+    seconds_diff = time_diff.total_seconds()
+    return JsonResponse({
+        "has_vitals": True,
+        "temp": record.temp,
+        "heart_rate": record.heart_rate,
+        "blood_oxygen": record.blood_oxygen,
+        "sbp": record.sbp,
+        "dbp": record.dbp,
+        "ecg_sensor_frame": list(record.ecg_sensor_frame),
+        "time_diff_seconds": seconds_diff,
+    })
+
 
 
 
