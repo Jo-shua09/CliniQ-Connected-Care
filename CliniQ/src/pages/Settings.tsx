@@ -25,10 +25,10 @@ import {
 
 interface User {
   username: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  surname: string;
   email: string;
-  phone?: string;
+  phone_number?: string;
   age: string;
   gender: string;
   password?: string;
@@ -48,10 +48,10 @@ export default function Settings() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
-    firstName: "",
-    lastName: "",
+    first_name: "",
+    surname: "",
     email: "",
-    phone: "",
+    phone_number: "",
     age: "",
     gender: "",
     password: "",
@@ -66,10 +66,10 @@ export default function Settings() {
           setUser(userProfile);
           setFormData({
             username: userProfile.username || "",
-            firstName: userProfile.firstName || "",
-            lastName: userProfile.lastName || "",
+            first_name: userProfile.first_name || "",
+            surname: userProfile.surname || "",
             email: userProfile.email || "",
-            phone: userProfile.phone || "",
+            phone_number: userProfile.phone_number || "",
             age: userProfile.age || "",
             gender: userProfile.gender || "",
             password: userProfile.password || "",
@@ -82,10 +82,10 @@ export default function Settings() {
             setUser(parsedUser);
             setFormData({
               username: parsedUser.username || "",
-              firstName: parsedUser.firstName || "",
-              lastName: parsedUser.lastName || "",
+              first_name: parsedUser.first_name || parsedUser.firstName || "",
+              surname: parsedUser.surname || parsedUser.lastName || "",
               email: parsedUser.email || "",
-              phone: parsedUser.phone || "",
+              phone_number: parsedUser.phone_number || parsedUser.phone || "",
               age: parsedUser.age || "",
               gender: parsedUser.gender || "",
               password: parsedUser.password || "", // Set password from parsedUser
@@ -101,10 +101,10 @@ export default function Settings() {
           setUser(parsedUser);
           setFormData({
             username: parsedUser.username || "",
-            firstName: parsedUser.firstName || "",
-            lastName: parsedUser.lastName || "",
+            first_name: parsedUser.first_name || parsedUser.firstName || "",
+            surname: parsedUser.surname || parsedUser.lastName || "",
             email: parsedUser.email || "",
-            phone: parsedUser.phone || "",
+            phone_number: parsedUser.phone_number || parsedUser.phone || "",
             age: parsedUser.age || "",
             gender: parsedUser.gender || "",
             password: parsedUser.password || "", // Set password from parsedUser
@@ -273,8 +273,8 @@ export default function Settings() {
           {/* Avatar */}
           <div className="mt-4 sm:mt-6 flex items-center gap-3 sm:gap-4">
             <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-muted font-heading text-xl sm:text-2xl font-semibold text-muted-foreground">
-              {user?.firstName?.[0] || "J"}
-              {user?.lastName?.[0] || "D"}
+              {user?.first_name?.[0] || "J"}
+              {user?.surname?.[0] || "D"}
             </div>
             <div>
               <Button variant="outline" size="sm" className="gap-2 text-xs sm:text-sm">
@@ -307,29 +307,29 @@ export default function Settings() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-xs sm:text-sm">
+                <Label htmlFor="first_name" className="text-xs sm:text-sm">
                   First Name
                 </Label>
                 <Input
-                  id="firstName"
-                  name="firstName"
+                  id="first_name"
+                  name="first_name"
                   type="text"
                   placeholder="Enter your first name"
-                  value={formData.firstName}
+                  value={formData.first_name}
                   onChange={handleChange}
                   className="text-sm"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-xs sm:text-sm">
+                <Label htmlFor="surname" className="text-xs sm:text-sm">
                   Last Name
                 </Label>
                 <Input
-                  id="lastName"
-                  name="lastName"
+                  id="surname"
+                  name="surname"
                   type="text"
                   placeholder="Enter your last name"
-                  value={formData.lastName}
+                  value={formData.surname}
                   onChange={handleChange}
                   className="text-sm"
                 />
@@ -355,17 +355,17 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone" className="text-xs sm:text-sm">
+              <Label htmlFor="phone_number" className="text-xs sm:text-sm">
                 Phone Number
               </Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="phone"
-                  name="phone"
+                  id="phone_number"
+                  name="phone_number"
                   type="tel"
                   placeholder="Enter your phone number"
-                  value={formData.phone}
+                  value={formData.phone_number}
                   onChange={handleChange}
                   className="pl-10 text-sm"
                 />

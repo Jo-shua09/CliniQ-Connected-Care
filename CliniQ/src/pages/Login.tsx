@@ -43,7 +43,7 @@ export default function Login() {
 
       toast({
         title: "Welcome back!",
-        description: `Logged in as ${response.user.firstName} with ${response.user.subscription} plan.`,
+        description: `Logged in as ${response.user.first_name} with ${response.user.subscription} plan.`,
       });
       navigate("/dashboard");
     } catch (error) {

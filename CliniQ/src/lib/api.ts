@@ -2,10 +2,10 @@ const API_BASE_URL = "https://cliniq2.pythonanywhere.com";
 
 export interface User {
   username: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  surname: string;
   email: string;
-  phone?: string;
+  phone_number?: string;
   age: string;
   gender: string;
   subscription: "standard" | "premium";
@@ -13,10 +13,10 @@ export interface User {
 
 export interface SignupData {
   username: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  surname: string;
   email: string;
-  phone?: string;
+  phone_number?: string;
   age: string;
   gender: string;
   password: string;
@@ -33,8 +33,7 @@ export interface LoginResponse {
 }
 
 export interface SignupResponse {
-  user: User;
-  token: string;
+  success: boolean;
 }
 
 export interface ApiError {

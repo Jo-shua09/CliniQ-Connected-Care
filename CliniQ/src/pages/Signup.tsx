@@ -21,10 +21,10 @@ export default function Signup() {
 
   const [formData, setFormData] = useState({
     username: "",
-    firstName: "",
-    lastName: "",
+    first_name: "",
+    surname: "",
     email: "",
-    phone: "",
+    phone_number: "",
     age: "",
     gender: "",
     password: "",
@@ -54,10 +54,10 @@ export default function Signup() {
     try {
       const signupData = {
         username: formData.username,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        first_name: formData.first_name,
+        surname: formData.surname,
         email: formData.email,
-        phone: formData.phone,
+        phone_number: formData.phone_number,
         age: formData.age,
         gender: formData.gender,
         password: formData.password,
@@ -65,12 +65,26 @@ export default function Signup() {
 
       const response = await apiClient.signup(signupData);
 
-      // Store auth token and user data temporarily
-      setAuthToken(response.token);
-      localStorage.setItem("cliniq_user_temp", JSON.stringify(response.user));
+      // Since signup only returns {success: boolean}, we need to handle differently
+      if (response.success) {
+        // Store user data temporarily for subscription selection
+        const tempUser = {
+          username: formData.username,
+          first_name: formData.first_name,
+          surname: formData.surname,
+          email: formData.email,
+          phone_number: formData.phone_number,
+          age: formData.age,
+          gender: formData.gender,
+          subscription: "standard" as const, // default
+        };
+        localStorage.setItem("cliniq_user_temp", JSON.stringify(tempUser));
 
-      setIsLoading(false);
-      setShowSubscriptionModal(true);
+        setIsLoading(false);
+        setShowSubscriptionModal(true);
+      } else {
+        throw new Error("Signup failed");
+      }
     } catch (error) {
       setIsLoading(false);
       toast({
@@ -173,23 +187,23 @@ export default function Signup() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="first_name">First Name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="firstName"
-                    name="firstName"
+                    id="first_name"
+                    name="first_name"
                     placeholder="John"
                     className="pl-10"
-                    value={formData.firstName}
+                    value={formData.first_name}
                     onChange={handleChange}
                     required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" name="lastName" placeholder="Doe" value={formData.lastName} onChange={handleChange} required />
+                <Label htmlFor="surname">Last Name</Label>
+                <Input id="surname" name="surname" placeholder="Doe" value={formData.surname} onChange={handleChange} required />
               </div>
             </div>
 
@@ -211,16 +225,16 @@ export default function Signup() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone_number">Phone Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="phone"
-                  name="phone"
+                  id="phone_number"
+                  name="phone_number"
                   type="tel"
                   placeholder="+1 (555) 000-0000"
                   className="pl-10"
-                  value={formData.phone}
+                  value={formData.phone_number}
                   onChange={handleChange}
                 />
               </div>
