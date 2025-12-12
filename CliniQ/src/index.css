@@ -1,0 +1,198 @@
+@import "@fontsource/space-grotesk/300.css";
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/outfit/300.css";
+@import "@fontsource/outfit/400.css";
+@import "@fontsource/outfit/500.css";
+@import "@fontsource/outfit/600.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ClinQ Health Monitoring Platform Design System */
+@layer base {
+  :root {
+    /* Primary - Deep Teal (Trust, Calm, Medical) */
+    --primary: 195 65% 33%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft Cyan (Health, Vitality) */
+    --secondary: 174 63% 55%;
+    --secondary-foreground: 195 65% 15%;
+
+    /* Accent - Coral (Alerts, CTAs) */
+    --accent: 0 100% 71%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Background & Surfaces */
+    --background: 210 20% 98%;
+    --foreground: 200 18% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 200 18% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 18% 20%;
+
+    /* Muted */
+    --muted: 210 14% 95%;
+    --muted-foreground: 200 10% 46%;
+
+    /* Borders & Inputs */
+    --border: 210 14% 89%;
+    --input: 210 14% 89%;
+    --ring: 195 65% 33%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Health Status Colors */
+    --status-normal: 152 69% 45%;
+    --status-warning: 45 93% 58%;
+    --status-alert: 0 84% 60%;
+    --status-low: 210 100% 56%;
+
+    /* Vitals Colors */
+    --vital-heart: 0 84% 60%;
+    --vital-oxygen: 199 89% 48%;
+    --vital-temperature: 45 93% 58%;
+    --vital-pressure: 152 69% 45%;
+
+    /* Radius */
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 200 18% 20%;
+    --sidebar-primary: 195 65% 33%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 195 65% 96%;
+    --sidebar-accent-foreground: 195 65% 33%;
+    --sidebar-border: 210 14% 92%;
+    --sidebar-ring: 195 65% 33%;
+  }
+
+  .dark {
+    --primary: 195 65% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 174 63% 40%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 0 100% 65%;
+    --accent-foreground: 0 0% 100%;
+
+    --background: 200 18% 10%;
+    --foreground: 210 14% 95%;
+
+    --card: 200 18% 14%;
+    --card-foreground: 210 14% 95%;
+
+    --popover: 200 18% 14%;
+    --popover-foreground: 210 14% 95%;
+
+    --muted: 200 18% 18%;
+    --muted-foreground: 210 14% 65%;
+
+    --border: 200 18% 22%;
+    --input: 200 18% 22%;
+    --ring: 195 65% 50%;
+
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --sidebar-background: 200 18% 12%;
+    --sidebar-foreground: 210 14% 95%;
+    --sidebar-primary: 195 65% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 18% 18%;
+    --sidebar-accent-foreground: 195 65% 50%;
+    --sidebar-border: 200 18% 20%;
+    --sidebar-ring: 195 65% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Gradient utilities */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(195 65% 45%) 100%);
+  }
+
+  .gradient-hero {
+    background: linear-gradient(135deg, hsl(195 65% 33%) 0%, hsl(174 63% 45%) 100%);
+  }
+
+  .gradient-card {
+    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(210 14% 97%) 100%);
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-card/80 backdrop-blur-lg border border-border/50;
+  }
+
+  /* Health status badges */
+  .status-normal {
+    @apply bg-status-normal/15 text-status-normal border border-status-normal/30;
+  }
+
+  .status-warning {
+    @apply bg-status-warning/15 text-status-warning border border-status-warning/30;
+  }
+
+  .status-alert {
+    @apply bg-status-alert/15 text-status-alert border border-status-alert/30;
+  }
+
+  .status-low {
+    @apply bg-status-low/15 text-status-low border border-status-low/30;
+  }
+
+  /* Pulse animation for real-time data */
+  .pulse-live {
+    animation: pulse-live 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-live {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5;
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    @apply transition-all duration-300 ease-out;
+  }
+}
