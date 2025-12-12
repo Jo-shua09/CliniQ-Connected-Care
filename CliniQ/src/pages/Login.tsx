@@ -46,9 +46,13 @@ export default function Login() {
       } else {
         // Default user for demo purposes while the BE is in development
         const defaultUser = {
+          username: "johndoe",
           firstName: "John",
           lastName: "Doe",
           email: email,
+          age: 30,
+          gender: "male",
+          phone: "123-456-7890",
           subscription: "standard",
         };
         localStorage.setItem("cliniq_user", JSON.stringify(defaultUser));
@@ -79,13 +83,13 @@ export default function Login() {
 
             <form onSubmit={handleLogin} className="mt-6 sm:mt-8 space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">Username</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="name@example.com"
+                    placeholder="username"
                     className="pl-10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}

@@ -5,7 +5,7 @@ export interface User {
   lastName: string;
   email: string;
   phone?: string;
-  subscription: "standard" | "professional";
+  subscription: "standard" | "premium";
 }
 
 export function useAuth() {
@@ -38,7 +38,7 @@ export function useAuth() {
     return newUser;
   };
 
-  const setSubscription = (subscription: "standard" | "professional") => {
+  const setSubscription = (subscription: "standard" | "premium") => {
     if (user) {
       const updatedUser = { ...user, subscription };
       setUser(updatedUser);

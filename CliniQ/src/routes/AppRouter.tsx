@@ -7,6 +7,9 @@ import LandingPage from "@/pages/LandingPage";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import Dashboard from "@/pages/Dashboard";
+import Network from "@/pages/Network";
+import Chat from "@/pages/Chat";
+import Settings from "@/pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +24,9 @@ const AppRouter = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/network" element={<Network />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

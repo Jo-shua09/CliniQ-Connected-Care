@@ -1,0 +1,424 @@
+import { useState } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { AddConnectionModal } from "@/components/modals/AddConnectionModal";
+import { PendingRequestModal } from "@/components/modals/PendingRequestModal";
+import { UserProfileModal } from "@/components/modals/UserProfileModal";
+import { EditPermissionsModal } from "@/components/modals/EditPermissionsModal";
+import { motion } from "framer-motion";
+import { Users, UserPlus, Eye, Clock, Check, X, MoreVertical, Search, Trash2, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+const initialMonitoringPeople = [
+  {
+    id: 1,
+    name: "Mary Johnson",
+    email: "Mary@gmail.com",
+    gender: "Female",
+    contact: "555-1234",
+    avatar: "MJ",
+    lastUpdate: "5 mins ago",
+    status: "normal",
+    vitalSigns: {
+      heartRate: 72,
+      oxygenLevel: 95,
+      bloodSugar: 98,
+      temperature: 98.6,
+    },
+    dietData: {},
+  },
+  {
+    id: 2,
+    name: "Robert Doe",
+    email: "Robert@gmail.com",
+    gender: "Male",
+    contact: "555-1234",
+    avatar: "RD",
+    lastUpdate: "1 hour ago",
+    status: "warning",
+    vitalSigns: {
+      heartRate: 88,
+      oxygenLevel: 89,
+      bloodSugar: 150,
+      temperature: 100.4,
+    },
+    dietData: {},
+  },
+];
+
+const initialMonitoringMe = [
+  {
+    id: 1,
+    name: "Sarah Williams",
+    email: "williams@gmail.com",
+    gender: "Female",
+    contact: "555-1234",
+    avatar: "SW",
+    permissions: ["Vital Signs", "Diet Data"],
+  },
+];
+
+const initialPendingRequests = [
+  {
+    id: 1,
+    name: "Emily Davis",
+    email: "Emily@gmail.com",
+    gender: "Male",
+    contact: "555-1234",
+    avatar: "ED",
+    requestType: "wants to monitor you",
+    requestedData: ["Vital Signs", "Diet Data"],
+  },
+];
+
+export default function Network() {
+  const { toast } = useToast();
+  const [addConnectionOpen, setAddConnectionOpen] = useState(false);
+  const [pendingRequestModalOpen, setPendingRequestModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<(typeof initialPendingRequests)[0] | null>(null);
+  const [userProfileModalOpen, setUserProfileModalOpen] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<(typeof initialMonitoringPeople)[0] | null>(null);
+  const [editPermissionsModalOpen, setEditPermissionsModalOpen] = useState(false);
+  const [selectedMonitoringPerson, setSelectedMonitoringPerson] = useState<(typeof initialMonitoringMe)[0] | null>(null);
+  const [monitoringPeople, setMonitoringPeople] = useState(initialMonitoringPeople);
+  const [monitoringMe, setMonitoringMe] = useState(initialMonitoringMe);
+  const [pendingRequests, setPendingRequests] = useState(initialPendingRequests);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleAcceptRequest = (id: number, selectedPermissions: string[]) => {
+    const request = pendingRequests.find((r) => r.id === id);
+    if (request) {
+      setMonitoringMe([
+        ...monitoringMe,
+        {
+          id: Date.now(),
+          name: request.name,
+          email: request.email,
+          gender: request.gender,
+          contact: request.contact,
+          avatar: request.avatar,
+          permissions: selectedPermissions,
+        },
+      ]);
+      setPendingRequests(pendingRequests.filter((r) => r.id !== id));
+      toast({
+        title: "Request accepted",
+        description: `${request.name} can now monitor your selected health data.`,
+      });
+    }
+  };
+
+  const handleDenyRequest = (id: number) => {
+    const request = pendingRequests.find((r) => r.id === id);
+    setPendingRequests(pendingRequests.filter((r) => r.id !== id));
+    toast({
+      title: "Request denied",
+      description: request ? `Connection request from ${request.name} has been denied.` : "Request denied.",
+    });
+  };
+
+  const handleRequestClick = (request: (typeof initialPendingRequests)[0]) => {
+    setSelectedRequest(request);
+    setPendingRequestModalOpen(true);
+  };
+
+  const handleRemoveConnection = (type: "monitoring" | "monitoredBy", id: number) => {
+    if (type === "monitoring") {
+      const person = monitoringPeople.find((p) => p.id === id);
+      setMonitoringPeople(monitoringPeople.filter((p) => p.id !== id));
+      toast({
+        title: "Connection removed",
+        description: person ? `You are no longer monitoring ${person.name}.` : "Connection removed.",
+      });
+    } else {
+      const person = monitoringMe.find((p) => p.id === id);
+      setMonitoringMe(monitoringMe.filter((p) => p.id !== id));
+      toast({
+        title: "Access revoked",
+        description: person ? `${person.name} can no longer see your health data.` : "Access revoked.",
+      });
+    }
+  };
+
+  const handlePersonClick = (person: (typeof initialMonitoringPeople)[0]) => {
+    setSelectedPerson(person);
+    setUserProfileModalOpen(true);
+  };
+
+  const handleEditPermissions = (person: (typeof initialMonitoringMe)[0]) => {
+    setSelectedMonitoringPerson(person);
+    setEditPermissionsModalOpen(true);
+  };
+
+  const handleSavePermissions = (id: number, permissions: string[]) => {
+    setMonitoringMe(monitoringMe.map((person) => (person.id === id ? { ...person, permissions } : person)));
+    toast({
+      title: "Permissions updated",
+      description: "The person's access permissions have been updated successfully.",
+    });
+  };
+
+  const filteredMonitoringPeople = monitoringPeople.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  const filteredMonitoringMe = monitoringMe.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  return (
+    <AppLayout>
+      <div className="mx-auto max-w-4xl">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        >
+          <div>
+            <h1 className="font-heading text-xl sm:text-2xl font-bold text-foreground">Network</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Manage your health monitoring connections</p>
+          </div>
+          <Button className="gap-2 w-full sm:w-auto" onClick={() => setAddConnectionOpen(true)}>
+            <UserPlus className="h-4 w-4" />
+            Add Connection
+          </Button>
+        </motion.div>
+
+        {/* Search */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="relative mb-6 sm:mb-8">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder="Search connections..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+        </motion.div>
+
+        {/* Pending Requests */}
+        {pendingRequests.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-6 sm:mb-8">
+            <h2 className="mb-4 flex items-center gap-2 font-heading text-base sm:text-lg font-semibold text-foreground">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-status-warning" />
+              Pending Requests
+              <span className="rounded-full bg-status-warning/15 px-2 py-0.5 text-xs font-medium text-status-warning">{pendingRequests.length}</span>
+            </h2>
+            <div className="space-y-3">
+              {pendingRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-status-warning/30 bg-status-warning/5 p-4 cursor-pointer hover:bg-status-warning/10 transition-colors"
+                  onClick={() => handleRequestClick(request)}
+                >
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-primary/10 font-heading text-sm sm:text-base font-semibold text-primary">
+                      {request.avatar}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm sm:text-base text-foreground">{request.name}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{request.requestType}</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {request.requestedData.map((data) => (
+                          <span key={data} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                            {data}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-13 sm:ml-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 flex-1 sm:flex-none"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDenyRequest(request.id);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                      Deny
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="gap-1 flex-1 sm:flex-none"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAcceptRequest(request.id, request.requestedData);
+                      }}
+                    >
+                      <Check className="h-4 w-4" />
+                      Accept
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* People I'm Monitoring */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-6 sm:mb-8">
+          <h2 className="mb-4 flex items-center gap-2 font-heading text-base sm:text-lg font-semibold text-foreground">
+            <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            People I'm Monitoring
+          </h2>
+          {filteredMonitoringPeople.length > 0 ? (
+            <div className="space-y-3">
+              {filteredMonitoringPeople.map((person) => (
+                <div
+                  key={person.id}
+                  className="card-hover flex items-center justify-between rounded-xl border border-border bg-card p-3 sm:p-4 shadow-card cursor-pointer"
+                  onClick={() => handlePersonClick(person)}
+                >
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-primary/10 font-heading text-sm sm:text-base font-semibold text-primary">
+                      {person.avatar}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm sm:text-base text-foreground">{person.name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-6">
+                    <div className="hidden text-right sm:block">
+                      {person.vitalSigns && (
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className={cn("h-2 w-2 rounded-full", person.status === "normal" ? "bg-status-normal" : "bg-status-warning")} />
+                            <span className="text-sm font-medium text-foreground">{person.vitalSigns.heartRate} bpm</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={cn("h-2 w-2 rounded-full", person.status === "normal" ? "bg-status-normal" : "bg-status-warning")} />
+                            <span className="text-sm font-medium text-foreground">{person.vitalSigns.oxygenLevel}%</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={cn("h-2 w-2 rounded-full", person.status === "normal" ? "bg-status-normal" : "bg-status-warning")} />
+                            <span className="text-sm font-medium text-foreground">{person.vitalSigns.bloodSugar} mg/dL</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={cn("h-2 w-2 rounded-full", person.status === "normal" ? "bg-status-normal" : "bg-status-warning")} />
+                            <span className="text-sm font-medium text-foreground">{person.vitalSigns.temperature}°F</span>
+                          </div>
+                        </div>
+                      )}
+                      {person.dietData && (
+                        <div className="flex items-center gap-3">
+                          {/* <div className="flex items-center gap-2">
+                            <span className={cn("h-2 w-2 rounded-full", person.status === "normal" ? "bg-status-normal" : "bg-status-warning")} />
+                            <span className="text-sm font-medium text-foreground">{person.dietData.heartRate} bpm</span>
+                          </div> */}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">{person.lastUpdate}</p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem>
+                          <Settings className="mr-2 h-4 w-4" />
+                          Manage Permissions
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => handleRemoveConnection("monitoring", person.id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove Connection
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 sm:p-8 text-center">
+              <Eye className="mx-auto h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
+              <p className="mt-2 text-sm sm:text-base text-muted-foreground">No connections found</p>
+              <Button variant="outline" className="mt-4" onClick={() => setAddConnectionOpen(true)}>
+                Add your first connection
+              </Button>
+            </div>
+          )}
+        </motion.div>
+
+        {/* People Monitoring Me */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <h2 className="mb-4 flex items-center gap-2 font-heading text-base sm:text-lg font-semibold text-foreground">
+            <Users className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
+            People Monitoring Me
+          </h2>
+          {filteredMonitoringMe.length > 0 ? (
+            <div className="space-y-3">
+              {filteredMonitoringMe.map((person) => (
+                <div
+                  key={person.id}
+                  className="card-hover flex items-center justify-between rounded-xl border border-border bg-card p-3 sm:p-4 shadow-card"
+                >
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-secondary/20 font-heading text-sm sm:text-base font-semibold text-secondary-foreground">
+                      {person.avatar}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm sm:text-base text-foreground">{person.name}</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {person.permissions.map((perm) => (
+                          <span key={perm} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                            {perm}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => handleEditPermissions(person)}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Edit Permissions
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => handleRemoveConnection("monitoredBy", person.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Revoke Access
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 sm:p-8 text-center">
+              <Users className="mx-auto h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
+              <p className="mt-2 text-sm sm:text-base text-muted-foreground">No one is monitoring you yet</p>
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Modals */}
+      <AddConnectionModal open={addConnectionOpen} onOpenChange={setAddConnectionOpen} />
+      <PendingRequestModal
+        open={pendingRequestModalOpen}
+        onOpenChange={setPendingRequestModalOpen}
+        request={selectedRequest}
+        onAccept={handleAcceptRequest}
+        onDeny={handleDenyRequest}
+      />
+      <UserProfileModal open={userProfileModalOpen} onOpenChange={setUserProfileModalOpen} person={selectedPerson} />
+      <EditPermissionsModal
+        open={editPermissionsModalOpen}
+        onOpenChange={setEditPermissionsModalOpen}
+        person={selectedMonitoringPerson}
+        onSave={handleSavePermissions}
+      />
+    </AppLayout>
+  );
+}
