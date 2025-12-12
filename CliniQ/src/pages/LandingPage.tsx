@@ -123,6 +123,46 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* CTA Section */}
+      <section className="py-12 sm:py-20">
+        <div className="container px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="rounded-2xl sm:rounded-3xl gradient-hero p-8 sm:p-12 text-center"
+          >
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold text-primary-foreground">Ready to Connect Your Health?</h2>
+            <p className="mt-2 sm:mt-3 text-sm sm:text-base text-primary-foreground/80">Join thousands of users monitoring health together</p>
+            <Link to="/signup">
+              <Button size="lg" variant="secondary" className="mt-4 sm:mt-6 px-6 sm:px-8 text-sm sm:text-base">
+                Get Started Free
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+       {/* Footer */}
+      <footer className="border-t border-border py-8 sm:py-12">
+        <div className="container px-4">
+          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+            <Link to="/" className="flex items-center gap-2">
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <span className="font-heading font-semibold text-sm sm:text-base text-foreground">CliniQ</span>
+            </Link>
+            <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm text-muted-foreground">
+              <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
+              <Link to="/signup" className="hover:text-foreground transition-colors">Sign Up</Link>
+              <Link to="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              © 2025 CliniQ Health. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
