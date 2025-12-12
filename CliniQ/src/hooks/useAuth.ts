@@ -13,7 +13,7 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("clinq_user");
+    const storedUser = localStorage.getItem("cliniq_user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
@@ -21,7 +21,7 @@ export function useAuth() {
   }, []);
 
   const login = (email: string) => {
-    const storedUser = localStorage.getItem("clinq_user");
+    const storedUser = localStorage.getItem("cliniq_user");
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       if (userData.email === email) {
@@ -42,7 +42,7 @@ export function useAuth() {
     if (user) {
       const updatedUser = { ...user, subscription };
       setUser(updatedUser);
-      localStorage.setItem("clinq_user", JSON.stringify(updatedUser));
+      localStorage.setItem("cliniq_user", JSON.stringify(updatedUser));
     }
   };
 
