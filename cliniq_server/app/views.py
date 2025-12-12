@@ -8,7 +8,7 @@ from django.utils import timezone
 
 
 deployed_on_pythonanywhere = False
-if os.getenv("PYTHONANYWHERE_DOMAIN") is not None:
+if os.getenv("PYTHONANYWHERE_DOMAIN_") is not None:
     deployed_on_pythonanywhere = True
     global model
     import tensorflow as tf
