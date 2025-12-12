@@ -119,7 +119,7 @@ export default function Chat() {
 
   return (
     <AppLayout>
-      <div className="mx-auto flex h-[calc(100vh-2rem)] max-w-4xl flex-col">
+      <div className="mx-auto flex md:h-[calc(100vh-2rem)] h-[calc(100vh-6rem)] max-w-4xl flex-col">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
