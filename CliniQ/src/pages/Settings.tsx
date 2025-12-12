@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import SubscriptionModal from "@/components/modals/SubscriptionModal";
 import { motion } from "framer-motion";
 import { Camera, Link2, Save, Shield, Bell, Download, Trash2, Crown, Zap, Eye, EyeOff, User, Mail, Phone, Users, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
