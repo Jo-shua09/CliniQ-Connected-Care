@@ -10,31 +10,46 @@ import { useToast } from "@/hooks/use-toast";
 import { apiClient, setAuthToken } from "@/lib/api";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if user is already logged in
   useEffect(() => {
     const storedUser = localStorage.getItem("cliniq_user");
-    if (storedUser) {
-      // Pre-fill email if user exists
-      const userData = JSON.parse(storedUser);
-      setEmail(userData.email || "");
+    if (storedUser && storedUser !== "undefined" && storedUser !== "null" && storedUser !== "") {
+      try {
+        const userData = JSON.parse(storedUser);
+        if (userData && typeof userData === "object" && userData.username) {
+          setUsername(userData.username);
+        }
+      } catch (e) {
+        console.error("Error parsing stored user data:", e);
+      }
     }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Basic validation
+    if (!username.trim() || !password.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter both username and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const response = await apiClient.login({
-        username: email, // Using email field as username for now
-        password,
+        username: username.trim(),
+        password: password.trim(),
       });
 
       // Store auth token and user data
@@ -42,14 +57,29 @@ export default function Login() {
       localStorage.setItem("cliniq_user", JSON.stringify(response.user));
 
       toast({
-        title: "Welcome back!",
-        description: `Logged in as ${response.user.first_name} with ${response.user.subscription} plan.`,
+        title: "Login successful!",
+        description: `Welcome back, ${response.user.username}!`,
       });
-      navigate("/dashboard");
-    } catch (error) {
+
+      // Navigate to dashboard
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500);
+    } catch (error: any) {
+      console.error("Login error:", error);
+
+      // More specific error messages
+      let errorMessage = "An error occurred during login";
+
+      if (error.message?.includes("Invalid") || error.message?.includes("failed")) {
+        errorMessage = "Invalid username or password";
+      } else if (error.message?.includes("Network")) {
+        errorMessage = "Network error. Please check your connection.";
+      }
+
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "An error occurred during login",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -75,16 +105,16 @@ export default function Login() {
 
             <form onSubmit={handleLogin} className="mt-6 sm:mt-8 space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">Username</Label>
+                <Label htmlFor="username">Username</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    id="email"
-                    type="email"
+                    id="username"
+                    type="text"
                     placeholder="username"
                     className="pl-10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>

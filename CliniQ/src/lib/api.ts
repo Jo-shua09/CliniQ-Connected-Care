@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://cliniq2.pythonanywhere.com";
+const API_BASE_URL = "http://cliniq2.pythonanywhere.com";
 
 export interface User {
   username: string;
@@ -9,6 +9,8 @@ export interface User {
   age: string;
   gender: string;
   subscription: "standard" | "premium";
+  diet_summary?: string;
+  mental_health_summary?: string;
 }
 
 export interface SignupData {
@@ -30,6 +32,11 @@ export interface LoginData {
 export interface LoginResponse {
   user: User;
   token: string;
+}
+
+export interface SimpleLoginResponse {
+  success: boolean;
+  message?: string;
 }
 
 export interface SignupResponse {
@@ -73,13 +80,23 @@ export interface AcceptCancelConnectionRequest {
   id: number;
 }
 
+// FIXED: Changed from email to username
 export interface SetPremiumRequest {
-  email: string;
-  value: string;
+  username: string;
+  value: string; // According to spec, should be "true" or "false"
 }
 
 export interface IsPremiumRequest {
-  email: string;
+  username: string;
+}
+
+export interface SetDeviceIdRequest {
+  username: string;
+  device_id: string;
+}
+
+export interface HasDeviceRequest {
+  username: string;
 }
 
 export interface ApiResponse {
@@ -122,89 +139,126 @@ class ApiClient {
   }
 
   async signup(data: SignupData): Promise<SignupResponse> {
-    return this.request<SignupResponse>("/signup", {
-      method: "POST",
-      body: JSON.stringify(data),
+    const params = new URLSearchParams(data as any);
+    return this.request<SignupResponse>(`/signup?${params.toString()}`, {
+      method: "GET",
     });
   }
 
   async login(data: LoginData): Promise<LoginResponse> {
-    return this.request<LoginResponse>("/login", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
+    const params = new URLSearchParams(data as any);
 
-  async getUserProfile(token: string): Promise<User> {
-    return this.request<User>("/user_profile", {
+    const loginResult = await this.request<SimpleLoginResponse>(`/login?${params.toString()}`, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    });
+
+    if (!loginResult.success) {
+      throw new Error(loginResult.message || "Invalid username or password");
+    }
+
+    // After successful login, fetch user profile to get complete data
+    try {
+      const userProfile = await this.getUserProfile(data.username);
+      const token = `user_${data.username}_${Date.now()}`;
+
+      // Store the user data in localStorage
+      localStorage.setItem("cliniq_user", JSON.stringify(userProfile));
+      setAuthToken(token);
+
+      return {
+        user: userProfile,
+        token: token,
+      };
+    } catch (error) {
+      // If profile fetch fails, create minimal user
+      const minimalUser: User = {
+        username: data.username,
+        first_name: data.username,
+        surname: "",
+        email: "",
+        age: "0",
+        gender: "unknown",
+        subscription: "standard",
+      };
+
+      const token = `user_${data.username}_${Date.now()}`;
+      localStorage.setItem("cliniq_user", JSON.stringify(minimalUser));
+      setAuthToken(token);
+
+      return {
+        user: minimalUser,
+        token: token,
+      };
+    }
+  }
+
+  async getUserProfile(username: string): Promise<User> {
+    const params = new URLSearchParams({ username });
+    return this.request<User>(`/user_profile?${params.toString()}`, {
+      method: "GET",
     });
   }
 
-  async updateUserProfile(token: string, data: Partial<User>): Promise<User> {
-    return this.request<User>("/user_profile", {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
+  async updateUserProfile(data: Partial<User>): Promise<User> {
+    const params = new URLSearchParams(data as any);
+    return this.request<User>(`/update_user_profile?${params.toString()}`, {
+      method: "GET",
     });
   }
 
-  async createConnection(token: string, data: CreateConnectionRequest): Promise<ApiResponse> {
-    return this.request<ApiResponse>("/create_connection", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
+  async createConnection(data: CreateConnectionRequest): Promise<ApiResponse> {
+    const params = new URLSearchParams(data as any);
+    return this.request<ApiResponse>(`/create_connection?${params.toString()}`, {
+      method: "GET",
     });
   }
 
-  async getConnections(token: string, username: string): Promise<GetConnectionsResponse> {
-    return this.request<GetConnectionsResponse>("/get_connections", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ username }),
+  async getConnections(username: string): Promise<GetConnectionsResponse> {
+    const params = new URLSearchParams({ username });
+    return this.request<GetConnectionsResponse>(`/get_connections?${params.toString()}`, {
+      method: "GET",
     });
   }
 
-  async acceptConnection(token: string, data: AcceptCancelConnectionRequest): Promise<ApiResponse> {
-    return this.request<ApiResponse>("/accept_connection", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
+  async acceptConnection(data: AcceptCancelConnectionRequest): Promise<ApiResponse> {
+    const params = new URLSearchParams(data as any);
+    return this.request<ApiResponse>(`/accept_connection?${params.toString()}`, {
+      method: "GET",
     });
   }
 
-  async cancelConnection(token: string, data: AcceptCancelConnectionRequest): Promise<ApiResponse> {
-    return this.request<ApiResponse>("/cancel_connection", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
+  async cancelConnection(data: AcceptCancelConnectionRequest): Promise<ApiResponse> {
+    const params = new URLSearchParams(data as any);
+    return this.request<ApiResponse>(`/cancel_connection?${params.toString()}`, {
+      method: "GET",
+    });
+  }
+
+  async setDeviceId(data: SetDeviceIdRequest): Promise<ApiResponse> {
+    const params = new URLSearchParams(data as any);
+    return this.request<ApiResponse>(`/set_device_id?${params.toString()}`, {
+      method: "GET",
+    });
+  }
+
+  async hasDevice(data: HasDeviceRequest): Promise<ApiResponse> {
+    const params = new URLSearchParams(data as any);
+    return this.request<ApiResponse>(`/has_device?${params.toString()}`, {
+      method: "GET",
     });
   }
 
   async setPremium(data: SetPremiumRequest): Promise<ApiResponse> {
-    return this.request<ApiResponse>("/set_premium", {
-      method: "POST",
-      body: JSON.stringify(data),
+    const params = new URLSearchParams(data as any);
+    return this.request<ApiResponse>(`/set_premium?${params.toString()}`, {
+      method: "GET",
     });
   }
 
   async isPremium(data: IsPremiumRequest): Promise<ApiResponse> {
-    return this.request<ApiResponse>("/is_premium", {
-      method: "POST",
-      body: JSON.stringify(data),
+    const params = new URLSearchParams(data as any);
+    return this.request<ApiResponse>(`/is_premium?${params.toString()}`, {
+      method: "GET",
     });
   }
 }

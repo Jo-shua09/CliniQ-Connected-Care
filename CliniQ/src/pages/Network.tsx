@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { apiClient, getAuthToken, PendingRequest } from "@/lib/api";
+import { apiClient, PendingRequest } from "@/lib/api";
 
 // Types for UI
 interface MonitoringPerson {
@@ -42,6 +42,19 @@ interface MonitoringMePerson {
   permissions: string[];
 }
 
+interface ConnectionUser {
+  username: string;
+  email: string;
+  id: number;
+  accepted?: boolean;
+}
+
+interface GetConnectionsResponse {
+  monitoring?: ConnectionUser[];
+  monitored_by?: ConnectionUser[];
+  pending_requests?: PendingRequest[];
+}
+
 export default function Network() {
   const { toast } = useToast();
   const [addConnectionOpen, setAddConnectionOpen] = useState(false);
@@ -60,52 +73,63 @@ export default function Network() {
   useEffect(() => {
     const fetchConnections = async () => {
       try {
-        const token = getAuthToken();
         const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
-        if (!token || !user.username) {
+        if (!user.username) {
+          console.warn("No username found in localStorage");
           setLoading(false);
           return;
         }
 
-        const response = await apiClient.getConnections(token, user.username);
+        console.log("Fetching connections for username:", user.username);
+        const response: GetConnectionsResponse = await apiClient.getConnections(user.username);
+        console.log("Connections response:", response);
 
-        // Map monitored to monitoringPeople
-        const mappedMonitoringPeople: MonitoringPerson[] = response.monitored.map((person) => ({
-          id: person.id,
-          name: person.username,
-          email: person.email,
-          gender: "Unknown", // API doesn't provide
-          contact: "", // API doesn't provide
-          avatar: person.username.slice(0, 2).toUpperCase(),
-          lastUpdate: "Just now", // Default
-          status: "normal", // Default
-          vitalSigns: {
-            heartRate: 0, // Will be fetched separately or set to 0
-            oxygenLevel: 0,
-            bloodSugar: 0,
-            temperature: 0,
-          },
-          dietData: {},
-        }));
+        // Use monitoring instead of monitored (based on your API response)
+        const monitoringArray = response.monitoring || response.monitored || [];
+        const monitoredByArray = response.monitored_by || [];
 
-        // Map monitored_by to monitoringMe
-        const mappedMonitoringMe: MonitoringMePerson[] = response.monitored_by.map((person) => ({
-          id: person.id,
-          name: person.username,
-          email: person.email,
-          gender: "Unknown",
-          contact: "",
-          avatar: person.username.slice(0, 2).toUpperCase(),
-          permissions: ["Vital Signs", "Diet Data"], // Default permissions
-        }));
+        // Filter out pending requests (accepted: false) from monitoring list
+        const mappedMonitoringPeople: MonitoringPerson[] = monitoringArray
+          .filter((person: ConnectionUser) => person.accepted !== false) // Only show accepted or undefined
+          .map((person) => ({
+            id: person.id,
+            name: person.username,
+            email: person.email,
+            gender: "Unknown",
+            contact: "",
+            avatar: person.username.slice(0, 2).toUpperCase(),
+            lastUpdate: "Just now",
+            status: "normal",
+            vitalSigns: {
+              heartRate: 72,
+              oxygenLevel: 98,
+              bloodSugar: 95,
+              temperature: 36.5,
+            },
+            dietData: {},
+          }));
+
+        // Filter out pending requests (accepted: false) from monitored_by list
+        const mappedMonitoringMe: MonitoringMePerson[] = monitoredByArray
+          .filter((person: ConnectionUser) => person.accepted !== false) // Only show accepted or undefined
+          .map((person) => ({
+            id: person.id,
+            name: person.username,
+            email: person.email,
+            gender: "Unknown",
+            contact: "",
+            avatar: person.username.slice(0, 2).toUpperCase(),
+            permissions: ["Vital Signs", "Diet Data"],
+          }));
 
         setMonitoringPeople(mappedMonitoringPeople);
         setMonitoringMe(mappedMonitoringMe);
-        setPendingRequests(response.pending_requests);
-      } catch (error) {
+        setPendingRequests(response.pending_requests || []);
+      } catch (error: any) {
+        console.error("Error loading connections:", error);
         toast({
           title: "Error loading connections",
-          description: error instanceof Error ? error.message : "Failed to load connections",
+          description: error.message || "Failed to load connections",
           variant: "destructive",
         });
       } finally {
@@ -118,8 +142,9 @@ export default function Network() {
 
   const handleAcceptRequest = async (id: number, selectedPermissions: string[]) => {
     try {
-      const token = getAuthToken();
-      if (!token) {
+      const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
+      const token = localStorage.getItem("auth_token");
+      if (!token || !user.username) {
         toast({
           title: "Authentication error",
           description: "Please log in again",
@@ -150,10 +175,10 @@ export default function Network() {
           description: `${request.name} can now monitor your selected health data.`,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error accepting request",
-        description: error instanceof Error ? error.message : "Failed to accept request",
+        description: error.message || "Failed to accept request",
         variant: "destructive",
       });
     }
@@ -161,8 +186,9 @@ export default function Network() {
 
   const handleDenyRequest = async (id: number) => {
     try {
-      const token = getAuthToken();
-      if (!token) {
+      const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
+      const token = localStorage.getItem("auth_token");
+      if (!token || !user.username) {
         toast({
           title: "Authentication error",
           description: "Please log in again",
@@ -179,10 +205,10 @@ export default function Network() {
         title: "Request denied",
         description: request ? `Connection request from ${request.name} has been denied.` : "Request denied.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error denying request",
-        description: error instanceof Error ? error.message : "Failed to deny request",
+        description: error.message || "Failed to deny request",
         variant: "destructive",
       });
     }
@@ -232,6 +258,19 @@ export default function Network() {
   const filteredMonitoringPeople = monitoringPeople.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const filteredMonitoringMe = monitoringMe.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading connections...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -362,14 +401,6 @@ export default function Network() {
                             <span className={cn("h-2 w-2 rounded-full", person.status === "normal" ? "bg-status-normal" : "bg-status-warning")} />
                             <span className="text-sm font-medium text-foreground">{person.vitalSigns.temperature}°F</span>
                           </div>
-                        </div>
-                      )}
-                      {person.dietData && (
-                        <div className="flex items-center gap-3">
-                          {/* <div className="flex items-center gap-2">
-                            <span className={cn("h-2 w-2 rounded-full", person.status === "normal" ? "bg-status-normal" : "bg-status-warning")} />
-                            <span className="text-sm font-medium text-foreground">{person.dietData.heartRate} bpm</span>
-                          </div> */}
                         </div>
                       )}
                       <p className="text-xs text-muted-foreground">{person.lastUpdate}</p>
