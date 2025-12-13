@@ -1,4 +1,4 @@
-# Official Technical Documentation Of the LAGOS IMPACT HACKATHON 2025
+# Official Technical Documentation for TEAM 404 FOUND at LAGOS IMPACT HACKATHON 2025
 
 ## Team Members
 - **Ohieku Eneji Peacemaker**
