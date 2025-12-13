@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { AIAssistant } from "@/components/sections/AIAssistant";
-import { VitalCard } from "@/components/sections/VitalCard";
+import VitalCard from "@/components/sections/VitalCard";
 import { ConnectDeviceModal } from "@/components/modals/ConnectDeviceModal";
 import { DeviceStatus } from "@/components/sections/DeviceStatus";
 import { HealthScore } from "@/components/sections/HealthScore";
@@ -21,46 +21,24 @@ interface User {
   gender?: string;
 }
 
+type VitalStatus = "normal" | "low" | "slightly-high" | "high" | "critical";
+
+interface Vital {
+  name: string;
+  value: string | number;
+  unit: string;
+  status: VitalStatus;
+  icon: React.ElementType;
+  lastUpdated: string;
+}
+
 export default function Dashboard() {
   const [connectDeviceOpen, setConnectDeviceOpen] = useState(false);
   const [deviceConnected, setDeviceConnected] = useState(false);
+  const [deviceOnline, setDeviceOnline] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        setLoading(true);
-
-        // Get user from localStorage (stored during login)
-        const storedUser = localStorage.getItem("cliniq_user");
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-          } catch (parseError) {
-            console.error("Failed to parse stored user:", parseError);
-            // No default user - redirect to login
-            window.location.href = "/login";
-            return;
-          }
-        } else {
-          // No user data - redirect to login
-          window.location.href = "/login";
-          return;
-        }
-      } catch (error) {
-        console.error("Failed to fetch user profile:", error);
-        // Redirect to login on error
-        window.location.href = "/login";
-        return;
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
+  const [vitals, setVitals] = useState<Vital[]>([]);
 
   const checkSubscriptionStatus = async () => {
     try {
@@ -87,115 +65,78 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    checkSubscriptionStatus();
-  }, []);
+  const checkDeviceStatus = async () => {
+    try {
+      const storedUser = localStorage.getItem("cliniq_user");
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
 
-  // useEffect to check device status when component loads
+        // Check if device is connected
+        const hasDeviceResponse = await apiClient.hasDevice({ username: userData.username });
+        const isConnected = hasDeviceResponse.success || userData.device_id;
+        setDeviceConnected(isConnected);
+
+        // If connected, check if device is online by fetching vitals
+        if (isConnected) {
+          try {
+            const vitalsResponse = await fetch(
+              `${import.meta.env.VITE_API_URL || "https://cliniq2.pythonanywhere.com"}/get_vitals?username=${userData.username}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}`,
+                },
+              }
+            );
+
+            if (vitalsResponse.ok) {
+              const vitalsData = await vitalsResponse.json();
+              // Device is online if we get vitals data and online field is true
+              setDeviceOnline(vitalsData.online === true);
+            } else {
+              setDeviceOnline(false);
+            }
+          } catch (error) {
+            console.log("Error checking device online status:", error);
+            setDeviceOnline(false);
+          }
+        } else {
+          setDeviceOnline(false);
+        }
+      }
+    } catch (error) {
+      console.log("Error checking device status:", error);
+      setDeviceConnected(false);
+      setDeviceOnline(false);
+    }
+  };
+
   useEffect(() => {
-    const checkDeviceStatus = async () => {
+    const initializeDashboard = async () => {
       try {
         const storedUser = localStorage.getItem("cliniq_user");
         if (storedUser) {
-          const user = JSON.parse(storedUser);
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
 
-          // Check if user has a device connected via API
-          const hasDeviceResponse = await apiClient.hasDevice({ username: user.username });
+          // Check subscription status
+          await checkSubscriptionStatus();
 
-          // Also check locally stored device_id as fallback
-          if (hasDeviceResponse.success || user.device_id) {
-            setDeviceConnected(true);
-          }
+          // Check device status
+          await checkDeviceStatus();
         }
       } catch (error) {
-        console.log("Could not verify device status:", error);
+        console.log("Error initializing dashboard:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    checkDeviceStatus();
+    initializeDashboard();
+
+    const deviceStatusInterval = setInterval(checkDeviceStatus, 3000);
+
+    return () => clearInterval(deviceStatusInterval);
   }, []);
-
-  const standardVitalsData = useMemo(
-    () => [
-      {
-        icon: Heart,
-        label: "Heart Rate",
-        value: deviceConnected ? "67" : "-",
-        unit: "bpm",
-        status: "normal" as const,
-        statusLabel: "Normal",
-        lastUpdated: "Just now",
-        color: "heart" as const,
-      },
-      {
-        icon: Wind,
-        label: "Oxygen Level",
-        value: deviceConnected ? "95" : "-",
-        unit: "%",
-        status: "normal" as const,
-        statusLabel: "Normal",
-        lastUpdated: "Just now",
-        color: "oxygen" as const,
-      },
-      {
-        icon: Droplets,
-        label: "Blood Sugar",
-        value: deviceConnected ? "98" : "-",
-        unit: "mg/dL",
-        status: "normal" as const,
-        statusLabel: "Normal",
-        lastUpdated: "2 min ago",
-        color: "pressure" as const,
-      },
-      {
-        icon: Thermometer,
-        label: "Temperature",
-        value: deviceConnected ? "36.5" : "-",
-        unit: "°C",
-        status: "normal" as const,
-        statusLabel: "Normal",
-        lastUpdated: "Just now",
-        color: "temperature" as const,
-      },
-    ],
-    [deviceConnected]
-  );
-
-  const professionalVitalsData = useMemo(
-    () => [
-      {
-        icon: Activity,
-        label: "EP Estimation",
-        value: deviceConnected ? "142" : "-",
-        unit: "ms",
-        status: "normal" as const,
-        statusLabel: "Normal",
-        lastUpdated: "Just now",
-        color: "heart" as const,
-      },
-      {
-        icon: Heart,
-        label: "Ventricular Contraction",
-        value: deviceConnected ? "68" : "-",
-        unit: "%",
-        status: "normal" as const,
-        statusLabel: "Normal",
-        lastUpdated: "Just now",
-        color: "pressure" as const,
-      },
-      {
-        icon: Zap,
-        label: "Muscle Activity",
-        value: deviceConnected ? "87" : "-",
-        unit: "µV",
-        status: "normal" as const,
-        statusLabel: "Normal",
-        lastUpdated: "Just now",
-        color: "oxygen" as const,
-      },
-    ],
-    [deviceConnected]
-  );
 
   if (loading) {
     return (
@@ -257,36 +198,13 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <span className="text-xs sm:text-sm text-muted-foreground">Check vitals:</span>
               <button onClick={() => setConnectDeviceOpen(true)}>
-                <DeviceStatus connected={deviceConnected} />
+                <DeviceStatus connected={deviceConnected} online={deviceOnline} />
               </button>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-            {standardVitalsData.map((vital, idx) => (
-              <VitalCard key={vital.label} {...vital} delay={idx} />
-            ))}
-          </div>
+          <VitalCard onVitalsUpdate={setVitals} onDeviceStatusUpdate={(online) => setDeviceOnline(online)} />
         </div>
-
-        {/* Premium Vitals Section */}
-        {isProfessional && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-6 sm:mb-8">
-            <div className="mb-4 flex items-center gap-2">
-              <Crown className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
-              <h2 className="font-heading text-base sm:text-lg font-semibold text-foreground">Advanced Metrics</h2>
-              <Badge variant="secondary" className="text-xs">
-                Pro
-              </Badge>
-            </div>
-
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
-              {professionalVitalsData.map((vital, idx) => (
-                <VitalCard key={vital.label} {...vital} delay={idx + 4} />
-              ))}
-            </div>
-          </motion.div>
-        )}
 
         {/* Upgrade Banner for Standard users */}
         {!isProfessional && (
@@ -351,7 +269,14 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Modals */}
-      <ConnectDeviceModal open={connectDeviceOpen} onOpenChange={setConnectDeviceOpen} onDeviceConnected={() => setDeviceConnected(true)} />
+      <ConnectDeviceModal
+        open={connectDeviceOpen}
+        onOpenChange={setConnectDeviceOpen}
+        onDeviceConnected={() => {
+          setDeviceConnected(true);
+          checkDeviceStatus();
+        }}
+      />
     </AppLayout>
   );
 }

@@ -3,31 +3,44 @@ import { Wifi, WifiOff } from "lucide-react";
 
 interface DeviceStatusProps {
   connected: boolean;
+  online?: boolean;
 }
 
-export function DeviceStatus({ connected }: DeviceStatusProps) {
+export function DeviceStatus({ connected, online = false }: DeviceStatusProps) {
+  const getStatusDisplay = () => {
+    if (!connected) {
+      return {
+        text: "Device not connected",
+        icon: <WifiOff className="h-4 w-4" />,
+        color: "border-status-alert/30 bg-status-alert/10 text-status-alert",
+        dotColor: "bg-status-alert",
+      };
+    }
+
+    if (online) {
+      return {
+        text: "Device Online",
+        icon: <Wifi className="h-4 w-4" />,
+        color: "border-status-normal/30 bg-status-normal/10 text-status-normal",
+        dotColor: "bg-status-normal animate-pulse-subtle",
+      };
+    }
+
+    return {
+      text: "Device Connected (Offline)",
+      icon: <Wifi className="h-4 w-4 opacity-50" />,
+      color: "border-yellow-500/30 bg-yellow-500/10 text-yellow-600",
+      dotColor: "bg-yellow-500",
+    };
+  };
+
+  const status = getStatusDisplay();
+
   return (
-    <div className={cn(
-      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium",
-      connected 
-        ? "border-status-normal/30 bg-status-normal/10 text-status-normal" 
-        : "border-status-alert/30 bg-status-alert/10 text-status-alert"
-    )}>
-      <span className={cn(
-        "h-2 w-2 rounded-full",
-        connected ? "bg-status-normal animate-pulse-subtle" : "bg-status-alert"
-      )} />
-      {connected ? (
-        <>
-          <Wifi className="h-4 w-4" />
-          Device Connected
-        </>
-      ) : (
-        <>
-          <WifiOff className="h-4 w-4" />
-          Device not connected
-        </>
-      )}
+    <div className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium", status.color)}>
+      <span className={cn("h-2 w-2 rounded-full", status.dotColor)} />
+      {status.icon}
+      {status.text}
     </div>
   );
 }
