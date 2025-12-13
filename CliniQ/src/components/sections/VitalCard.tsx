@@ -1,5 +1,5 @@
 import { pullVitals } from "@/lib/getVitals";
-import { Activity, Heart, Thermometer, Droplets } from "lucide-react";
+import { Activity, Heart, Thermometer, Droplets, Zap, Wind } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +18,7 @@ interface Vital {
 interface VitalCardProps {
   onVitalsUpdate?: (vitals: Vital[]) => void;
   onDeviceStatusUpdate?: (online: boolean) => void;
+  isPremium?: boolean;
 }
 
 interface VitalsData {
@@ -33,7 +34,7 @@ interface VitalsData {
   time_diff_seconds?: unknown;
 }
 
-export default function VitalCard({ onVitalsUpdate, onDeviceStatusUpdate }: VitalCardProps) {
+export default function VitalCard({ onVitalsUpdate, onDeviceStatusUpdate, isPremium = false }: VitalCardProps) {
   const [vitals, setVitals] = useState<VitalsData | null>(null);
   const [lastVitalsData, setLastVitalsData] = useState<VitalsData | null>(() => {
     const stored = localStorage.getItem("lastVitals");
@@ -184,7 +185,7 @@ export default function VitalCard({ onVitalsUpdate, onDeviceStatusUpdate }: Vita
 
   // Even when vitals are null (loading), create placeholder cards
   const displayVitals = vitals || lastVitalsData;
-  const liveVitals: Vital[] = [
+  const baseVitals: Vital[] = [
     {
       name: "Blood Pressure",
       value: displayVitals ? `${displayVitals.sbp}/${displayVitals.dbp}` : "-/-",
@@ -218,6 +219,35 @@ export default function VitalCard({ onVitalsUpdate, onDeviceStatusUpdate }: Vita
       lastUpdated: lastUpdatedTime ? lastUpdatedTime.toLocaleString() : "Loading...",
     },
   ];
+
+  const premiumVitals: Vital[] = [
+    {
+      name: "EP Estimation",
+      value: "85",
+      unit: "ms",
+      status: "normal",
+      icon: Zap,
+      lastUpdated: lastUpdatedTime ? lastUpdatedTime.toLocaleString() : "Loading...",
+    },
+    {
+      name: "Ventricular Contraction",
+      value: "120",
+      unit: "bpm",
+      status: "normal",
+      icon: Heart,
+      lastUpdated: lastUpdatedTime ? lastUpdatedTime.toLocaleString() : "Loading...",
+    },
+    {
+      name: "Muscle Activity",
+      value: "75",
+      unit: "%",
+      status: "normal",
+      icon: Wind,
+      lastUpdated: lastUpdatedTime ? lastUpdatedTime.toLocaleString() : "Loading...",
+    },
+  ];
+
+  const liveVitals: Vital[] = isPremium ? [...baseVitals, ...premiumVitals] : baseVitals;
 
   const getStatusColor = (status: VitalStatus) => {
     switch (status) {
@@ -259,7 +289,7 @@ export default function VitalCard({ onVitalsUpdate, onDeviceStatusUpdate }: Vita
         <div className="w-full flex justify-between items-center mb-3"></div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {liveVitals.map((vital, index) => (
           <Card key={index} className="shadow-soft hover:shadow-medium transition-all duration-300">
             <CardHeader className="pb-3">
