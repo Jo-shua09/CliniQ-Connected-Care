@@ -28,7 +28,7 @@ const plans = [
   },
   {
     id: "premium" as const,
-    name: "premium",
+    name: "Premium",
     icon: Crown,
     price: "$9.99/mo",
     description: "Advanced metrics for comprehensive health insights",
@@ -45,12 +45,14 @@ export default function SubscriptionModal({ open, onSelect }: SubscriptionModalP
       <DialogContent className="max-w-2xl p-0 overflow-hidden" hideCloseButton>
         <div className="gradient-hero p-6 text-primary-foreground">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-heading text-primary-foreground">Choose Your Plan</DialogTitle>
-            <DialogDescription className="text-primary-foreground/80">Select the dashboard that fits your health monitoring needs</DialogDescription>
+            <DialogTitle className="text-xl sm:text-2xl font-heading text-primary-foreground">Choose Your Plan</DialogTitle>
+            <DialogDescription className="text-primary-foreground/80 text-sm sm:text-base">
+              Select the dashboard that fits your health monitoring needs
+            </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[70vh] sm:max-h-none">
           <div className="grid gap-4 sm:grid-cols-2">
             {plans.map((plan) => (
               <motion.button
@@ -58,32 +60,34 @@ export default function SubscriptionModal({ open, onSelect }: SubscriptionModalP
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSelected(plan.id)}
-                className={`relative flex flex-col rounded-xl border-2 p-5 text-left transition-all ${
+                className={`relative flex flex-col rounded-xl border-2 p-4 sm:p-5 text-left transition-all ${
                   selected === plan.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
                 }`}
               >
                 {plan.popular && (
-                  <span className="absolute -top-3 right-4 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
+                  <span className="absolute -top-2 sm:-top-3 right-3 sm:right-4 rounded-full bg-secondary px-2 sm:px-3 py-1 text-xs font-semibold text-secondary-foreground">
                     Popular
                   </span>
                 )}
                 <div className="flex items-center gap-3">
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-lg ${plan.id === "premium" ? "bg-secondary/20" : "bg-primary/10"}`}
+                    className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg ${
+                      plan.id === "premium" ? "bg-secondary/20" : "bg-primary/10"
+                    }`}
                   >
-                    <plan.icon className={`h-5 w-5 ${plan.id === "premium" ? "text-secondary" : "text-primary"}`} />
+                    <plan.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${plan.id === "premium" ? "text-secondary" : "text-primary"}`} />
                   </div>
                   <div>
-                    <h3 className="font-heading text-lg font-semibold text-foreground">{plan.name}</h3>
+                    <h3 className="font-heading text-base sm:text-lg font-semibold text-foreground">{plan.name}</h3>
                     <p className="text-sm font-medium text-primary">{plan.price}</p>
                   </div>
                 </div>
-                <p className="mt-3 text-sm text-muted-foreground">{plan.description}</p>
-                <ul className="mt-4 space-y-2">
+                <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground">{plan.description}</p>
+                <ul className="mt-3 sm:mt-4 space-y-1 sm:space-y-2">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2 text-sm text-foreground">
-                      <Check className="h-4 w-4 text-primary" />
-                      {feature}
+                    <li key={feature} className="flex items-center gap-2 text-xs sm:text-sm text-foreground">
+                      <Check className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
+                      <span className="text-left">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -98,8 +102,8 @@ export default function SubscriptionModal({ open, onSelect }: SubscriptionModalP
             ))}
           </div>
 
-          <Button onClick={() => onSelect(selected)} className="mt-6 w-full" size="lg">
-            Continue with {selected === "premium" ? "premium" : "Standard"}
+          <Button onClick={() => onSelect(selected)} className="mt-4 sm:mt-6 w-full text-sm sm:text-base" size="lg">
+            Continue with {selected === "premium" ? "Premium" : "Standard"}
           </Button>
         </div>
       </DialogContent>

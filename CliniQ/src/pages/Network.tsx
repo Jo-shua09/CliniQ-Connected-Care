@@ -5,13 +5,13 @@ import { PendingRequestModal } from "@/components/modals/PendingRequestModal";
 import { UserProfileModal } from "@/components/modals/UserProfileModal";
 import { EditPermissionsModal } from "@/components/modals/EditPermissionsModal";
 import { motion } from "framer-motion";
-import { Users, UserPlus, Eye, Clock, Check, X, MoreVertical, Search, Trash2, Settings } from "lucide-react";
+import { Users, UserPlus, Eye, Clock, Check, X, MoreVertical, Search, Trash2, Settings, AlertCircle, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { apiClient, PendingRequest } from "@/lib/api";
+import { apiClient, PendingRequest, VitalsData } from "@/lib/api";
 
 // Types for UI
 interface MonitoringPerson {
@@ -69,6 +69,14 @@ export default function Network() {
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState("");
+  const [rawResponse, setRawResponse] = useState<any>(null);
+  const [vitalsCache, setVitalsCache] = useState<Record<string, VitalsData>>({});
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
+    setCurrentUser(user.username || "");
+  }, []);
 
   useEffect(() => {
     const fetchConnections = async () => {
@@ -82,22 +90,44 @@ export default function Network() {
 
         console.log("Fetching connections for username:", user.username);
         const response: GetConnectionsResponse = await apiClient.getConnections(user.username);
-        console.log("Connections response:", response);
+        console.log("Full connections response:", response);
 
-        // Use monitoring instead of monitored (based on your API response)
-        const monitoringArray = response.monitoring || response.monitored || [];
-        const monitoredByArray = response.monitored_by || [];
+        // Store raw response for debugging
+        setRawResponse(response);
 
-        // Filter out pending requests (accepted: false) from monitoring list
-        const mappedMonitoringPeople: MonitoringPerson[] = monitoringArray
-          .filter((person: ConnectionUser) => person.accepted !== false) // Only show accepted or undefined
-          .map((person) => ({
-            id: person.id,
-            name: person.username,
-            email: person.email,
+        const currentUsername = user.username;
+        const monitoringUsers = response.monitoring || [];
+        const monitoredByUsers = response.monitored_by || [];
+
+        // Filter out current user from both arrays
+        const otherUsersInMonitoring = monitoringUsers.filter((u) => u.username !== currentUsername);
+        const otherUsersInMonitoredBy = monitoredByUsers.filter((u) => u.username !== currentUsername);
+
+        // Process pending requests (people who want to monitor me)
+        const myPendingRequests: PendingRequest[] = otherUsersInMonitoredBy
+          .filter((user) => user.accepted === false)
+          .map((user) => ({
+            id: user.id,
+            name: user.username,
+            email: user.email,
             gender: "Unknown",
             contact: "",
-            avatar: person.username.slice(0, 2).toUpperCase(),
+            avatar: user.username.slice(0, 2).toUpperCase(),
+            relation: "Unknown",
+            requestType: "Wants to monitor you",
+            requestedData: ["Vital Signs", "Diet Data"],
+          }));
+
+        // Process people I'm monitoring (accepted connections)
+        const myMonitoringPeople: MonitoringPerson[] = otherUsersInMonitoring
+          .filter((user) => user.accepted === true)
+          .map((user) => ({
+            id: user.id,
+            name: user.username,
+            email: user.email,
+            gender: "Unknown",
+            contact: "",
+            avatar: user.username.slice(0, 2).toUpperCase(),
             lastUpdate: "Just now",
             status: "normal",
             vitalSigns: {
@@ -109,27 +139,210 @@ export default function Network() {
             dietData: {},
           }));
 
-        // Filter out pending requests (accepted: false) from monitored_by list
-        const mappedMonitoringMe: MonitoringMePerson[] = monitoredByArray
-          .filter((person: ConnectionUser) => person.accepted !== false) // Only show accepted or undefined
-          .map((person) => ({
-            id: person.id,
-            name: person.username,
-            email: person.email,
+        // Process pending outgoing requests (people I'm trying to monitor)
+        const myPendingMonitoring: MonitoringPerson[] = otherUsersInMonitoring
+          .filter((user) => user.accepted === false)
+          .map((user) => ({
+            id: user.id,
+            name: user.username,
+            email: user.email,
             gender: "Unknown",
             contact: "",
-            avatar: person.username.slice(0, 2).toUpperCase(),
+            avatar: user.username.slice(0, 2).toUpperCase(),
+            lastUpdate: "Request sent",
+            status: "pending",
+            vitalSigns: {
+              heartRate: 0,
+              oxygenLevel: 0,
+              bloodSugar: 0,
+              temperature: 0,
+            },
+            dietData: {},
+          }));
+
+        // Combine accepted and pending monitoring people
+        const allMonitoringPeople = [...myMonitoringPeople, ...myPendingMonitoring];
+
+        // Process people monitoring me (accepted connections)
+        const myMonitoringMe: MonitoringMePerson[] = otherUsersInMonitoredBy
+          .filter((user) => user.accepted === true)
+          .map((user) => ({
+            id: user.id,
+            name: user.username,
+            email: user.email,
+            gender: "Unknown",
+            contact: "",
+            avatar: user.username.slice(0, 2).toUpperCase(),
             permissions: ["Vital Signs", "Diet Data"],
           }));
 
-        setMonitoringPeople(mappedMonitoringPeople);
-        setMonitoringMe(mappedMonitoringMe);
-        setPendingRequests(response.pending_requests || []);
-      } catch (error: any) {
+        if (myPendingRequests.length === 0 && myMonitoringPeople.length === 0 && myMonitoringMe.length === 0) {
+          console.log("No connections from backend, checking localStorage...");
+
+          // Check for simulated connections
+          const simulatedConnections = JSON.parse(localStorage.getItem("simulated_connections") || "[]");
+          const connectionsForUser = simulatedConnections.filter((conn: unknown) => {
+            const connection = conn as { monitored: string; monitored_by: string };
+            return connection.monitored === currentUsername || connection.monitored_by === currentUsername;
+          });
+
+          console.log("Simulated connections for user:", connectionsForUser);
+
+          if (connectionsForUser.length > 0) {
+            // Process simulated connections
+            connectionsForUser.forEach((conn: unknown) => {
+              const connection = conn as { id: number; monitored: string; monitored_by: string; accepted: boolean };
+              const otherUsername = connection.monitored === currentUsername ? connection.monitored_by : connection.monitored;
+
+              if (!connection.accepted) {
+                // Pending request
+                if (connection.monitored_by === currentUsername) {
+                  // I want to monitor someone (pending)
+                  console.log(`Simulated: I want to monitor ${otherUsername} (pending)`);
+                } else {
+                  // Someone wants to monitor me (pending)
+                  myPendingRequests.push({
+                    id: connection.id,
+                    name: otherUsername,
+                    email: "",
+                    gender: "Unknown",
+                    contact: "",
+                    avatar: otherUsername.slice(0, 2).toUpperCase(),
+                    relation: "Unknown",
+                    requestType: "Wants to monitor you",
+                    requestedData: ["Vital Signs", "Diet Data"],
+                  });
+                }
+              } else {
+                // Accepted connection
+                if (connection.monitored_by === currentUsername) {
+                  // I'm monitoring someone
+                  myMonitoringPeople.push({
+                    id: connection.id,
+                    name: otherUsername,
+                    email: "",
+                    gender: "Unknown",
+                    contact: "",
+                    avatar: otherUsername.slice(0, 2).toUpperCase(),
+                    lastUpdate: "Just now",
+                    status: "normal",
+                    vitalSigns: {
+                      heartRate: 72,
+                      oxygenLevel: 98,
+                      bloodSugar: 95,
+                      temperature: 36.5,
+                    },
+                    dietData: {},
+                  });
+                } else {
+                  // Someone is monitoring me
+                  myMonitoringMe.push({
+                    id: connection.id,
+                    name: otherUsername,
+                    email: "",
+                    gender: "Unknown",
+                    contact: "",
+                    avatar: otherUsername.slice(0, 2).toUpperCase(),
+                    permissions: ["Vital Signs", "Diet Data"],
+                  });
+                }
+              }
+            });
+
+            console.log("After adding simulated connections:");
+            console.log("- Pending requests:", myPendingRequests);
+            console.log("- People I'm monitoring:", myMonitoringPeople);
+            console.log("- People monitoring me:", myMonitoringMe);
+          }
+        }
+
+        setMonitoringPeople(myMonitoringPeople);
+        setMonitoringMe(myMonitoringMe);
+        setPendingRequests(myPendingRequests);
+      } catch (error: unknown) {
         console.error("Error loading connections:", error);
+
+        // Even if there's an error, try to load simulated connections
+        try {
+          const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
+          if (user.username) {
+            const simulatedConnections = JSON.parse(localStorage.getItem("simulated_connections") || "[]");
+            const connectionsForUser = simulatedConnections.filter((conn: unknown) => {
+              const connection = conn as { monitored: string; monitored_by: string };
+              return connection.monitored === user.username || connection.monitored_by === user.username;
+            });
+
+            if (connectionsForUser.length > 0) {
+              const myPendingRequests: PendingRequest[] = [];
+              const myMonitoringPeople: MonitoringPerson[] = [];
+              const myMonitoringMe: MonitoringMePerson[] = [];
+
+              connectionsForUser.forEach((conn: unknown) => {
+                const connection = conn as { id: number; monitored: string; monitored_by: string; accepted: boolean };
+                const otherUsername = connection.monitored === user.username ? connection.monitored_by : connection.monitored;
+
+                if (!connection.accepted && connection.monitored === user.username) {
+                  // Someone wants to monitor me (pending)
+                  myPendingRequests.push({
+                    id: connection.id,
+                    name: otherUsername,
+                    email: "",
+                    gender: "Unknown",
+                    contact: "",
+                    avatar: otherUsername.slice(0, 2).toUpperCase(),
+                    relation: "Unknown",
+                    requestType: "Wants to monitor you",
+                    requestedData: ["Vital Signs", "Diet Data"],
+                  });
+                } else if (connection.accepted) {
+                  if (connection.monitored_by === user.username) {
+                    // I'm monitoring someone
+                    myMonitoringPeople.push({
+                      id: connection.id,
+                      name: otherUsername,
+                      email: "",
+                      gender: "Unknown",
+                      contact: "",
+                      avatar: otherUsername.slice(0, 2).toUpperCase(),
+                      lastUpdate: "Just now",
+                      status: "normal",
+                      vitalSigns: {
+                        heartRate: 72,
+                        oxygenLevel: 98,
+                        bloodSugar: 95,
+                        temperature: 36.5,
+                      },
+                      dietData: {},
+                    });
+                  } else {
+                    // Someone is monitoring me
+                    myMonitoringMe.push({
+                      id: connection.id,
+                      name: otherUsername,
+                      email: "",
+                      gender: "Unknown",
+                      contact: "",
+                      avatar: otherUsername.slice(0, 2).toUpperCase(),
+                      permissions: ["Vital Signs", "Diet Data"],
+                    });
+                  }
+                }
+              });
+
+              setMonitoringPeople(myMonitoringPeople);
+              setMonitoringMe(myMonitoringMe);
+              setPendingRequests(myPendingRequests);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (simError: unknown) {
+          console.error("Error loading simulated connections:", simError);
+        }
+
         toast({
           title: "Error loading connections",
-          description: error.message || "Failed to load connections",
+          description: error instanceof Error ? error.message : "Failed to load connections",
           variant: "destructive",
         });
       } finally {
@@ -140,11 +353,44 @@ export default function Network() {
     fetchConnections();
   }, [toast]);
 
+  // Fetch vitals for monitored people
+  useEffect(() => {
+    const fetchVitalsForMonitoredPeople = async () => {
+      if (monitoringPeople.length === 0) return;
+
+      const updatedPeople = await Promise.all(
+        monitoringPeople.map(async (person) => {
+          if (person.status === "pending") return person; // Skip pending requests
+
+          try {
+            const vitals = await apiClient.getUserVitals(person.name);
+            return {
+              ...person,
+              vitalSigns: {
+                heartRate: vitals.bpm || 0,
+                oxygenLevel: vitals.spo2 || 0,
+                bloodSugar: vitals.sbp || 0, // Using sbp as blood sugar for now
+                temperature: vitals.temp || 0,
+              },
+              lastUpdate: vitals.online ? "Live" : "Last updated",
+            };
+          } catch (error) {
+            console.error(`Error fetching vitals for ${person.name}:`, error);
+            return person; // Return original person if fetch fails
+          }
+        })
+      );
+
+      setMonitoringPeople(updatedPeople);
+    };
+
+    fetchVitalsForMonitoredPeople();
+  }, [monitoringPeople]); // Run when monitoringPeople changes
+
   const handleAcceptRequest = async (id: number, selectedPermissions: string[]) => {
     try {
       const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
-      const token = localStorage.getItem("auth_token");
-      if (!token || !user.username) {
+      if (!user.username) {
         toast({
           title: "Authentication error",
           description: "Please log in again",
@@ -153,14 +399,16 @@ export default function Network() {
         return;
       }
 
-      await apiClient.acceptConnection(token, { id });
+      // Accept the connection
+      await apiClient.acceptConnection(id);
 
+      // Find the request
       const request = pendingRequests.find((r) => r.id === id);
       if (request) {
         setMonitoringMe([
           ...monitoringMe,
           {
-            id: Date.now(),
+            id: request.id,
             name: request.name,
             email: request.email,
             gender: request.gender,
@@ -169,7 +417,10 @@ export default function Network() {
             permissions: selectedPermissions,
           },
         ]);
+
+        // Remove from pending requests
         setPendingRequests(pendingRequests.filter((r) => r.id !== id));
+
         toast({
           title: "Request accepted",
           description: `${request.name} can now monitor your selected health data.`,
@@ -187,8 +438,7 @@ export default function Network() {
   const handleDenyRequest = async (id: number) => {
     try {
       const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
-      const token = localStorage.getItem("auth_token");
-      if (!token || !user.username) {
+      if (!user.username) {
         toast({
           title: "Authentication error",
           description: "Please log in again",
@@ -197,7 +447,8 @@ export default function Network() {
         return;
       }
 
-      await apiClient.cancelConnection(token, { id });
+      // Cancel/deny the connection
+      await apiClient.cancelConnection(id);
 
       const request = pendingRequests.find((r) => r.id === id);
       setPendingRequests(pendingRequests.filter((r) => r.id !== id));
@@ -256,7 +507,6 @@ export default function Network() {
   };
 
   const filteredMonitoringPeople = monitoringPeople.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
   const filteredMonitoringMe = monitoringMe.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   if (loading) {
@@ -370,20 +620,31 @@ export default function Network() {
               {filteredMonitoringPeople.map((person) => (
                 <div
                   key={person.id}
-                  className="card-hover flex items-center justify-between rounded-xl border border-border bg-card p-3 sm:p-4 shadow-card cursor-pointer"
+                  className={cn(
+                    "flex items-center justify-between rounded-xl border p-3 sm:p-4 shadow-card cursor-pointer",
+                    person.status === "pending"
+                      ? "card-hover border-status-warning/30 bg-status-warning/5 hover:bg-status-warning/10"
+                      : "card-hover border-border bg-card"
+                  )}
                   onClick={() => handlePersonClick(person)}
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-primary/10 font-heading text-sm sm:text-base font-semibold text-primary">
+                    <div
+                      className={cn(
+                        "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full font-heading text-sm sm:text-base font-semibold",
+                        person.status === "pending" ? "bg-status-warning/20 text-status-warning" : "bg-primary/10 text-primary"
+                      )}
+                    >
                       {person.avatar}
                     </div>
                     <div>
                       <p className="font-medium text-sm sm:text-base text-foreground">{person.name}</p>
+                      {person.status === "pending" && <p className="text-xs text-status-warning font-medium">Request sent</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-6">
                     <div className="hidden text-right sm:block">
-                      {person.vitalSigns && (
+                      {person.status === "normal" && person.vitalSigns && (
                         <div className="flex items-center gap-3">
                           <div className="flex items-center gap-2">
                             <span className={cn("h-2 w-2 rounded-full", person.status === "normal" ? "bg-status-normal" : "bg-status-warning")} />
@@ -412,17 +673,21 @@ export default function Network() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem>
-                          <Settings className="mr-2 h-4 w-4" />
-                          Manage Permissions
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                        {person.status === "normal" && (
+                          <>
+                            <DropdownMenuItem>
+                              <Settings className="mr-2 h-4 w-4" />
+                              Manage Permissions
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => handleRemoveConnection("monitoring", person.id)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Remove Connection
+                          {person.status === "pending" ? "Cancel Request" : "Remove Connection"}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

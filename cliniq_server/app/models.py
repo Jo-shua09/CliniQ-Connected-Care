@@ -23,6 +23,8 @@ class DeviceRecords(models.Model):
     sbp = models.IntegerField(blank=True, null=True)  # Systolic Blood Pressure
     dbp = models.IntegerField(blank=True, null=True)  # Diastolic Blood Pressure
     ecg_sensor_frame = models.TextField(blank=True, null=True)
+    age = models.IntegerField(blank=True, null=True)
+    gender = models.IntegerField(blank=True, null=True)
 
 
 class UserProfile(models.Model):

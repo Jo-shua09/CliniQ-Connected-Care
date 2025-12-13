@@ -144,7 +144,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-       {/* Footer */}
+      {/* Footer */}
       <footer className="border-t border-border py-8 sm:py-12">
         <div className="container px-4">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
@@ -153,13 +153,17 @@ export default function LandingPage() {
               <span className="font-heading font-semibold text-sm sm:text-base text-foreground">CliniQ</span>
             </Link>
             <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm text-muted-foreground">
-              <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
-              <Link to="/signup" className="hover:text-foreground transition-colors">Sign Up</Link>
-              <Link to="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+              <Link to="/login" className="hover:text-foreground transition-colors">
+                Login
+              </Link>
+              <Link to="/signup" className="hover:text-foreground transition-colors">
+                Sign Up
+              </Link>
+              <Link to="/dashboard" className="hover:text-foreground transition-colors">
+                Dashboard
+              </Link>
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              © 2025 CliniQ Health. All rights reserved.
-            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground">© 2025 CliniQ Health. All rights reserved.</p>
           </div>
         </div>
       </footer>

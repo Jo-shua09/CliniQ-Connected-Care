@@ -68,7 +68,6 @@ export default function Login() {
     } catch (error: any) {
       console.error("Login error:", error);
 
-      // More specific error messages
       let errorMessage = "An error occurred during login";
 
       if (error.message?.includes("Invalid") || error.message?.includes("failed")) {
