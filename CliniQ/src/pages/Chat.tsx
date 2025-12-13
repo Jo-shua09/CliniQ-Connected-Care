@@ -31,6 +31,8 @@ const initialMessages: Message[] = [
   },
 ];
 
+const LOCAL_STORAGE_KEY = "cliniq_chat_messages";
+
 export default function Chat() {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -42,12 +44,33 @@ export default function Chat() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Load user data and saved messages from localStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem("cliniq_user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+
+    // Load saved messages from localStorage
+    const savedMessages = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedMessages) {
+      try {
+        const parsedMessages = JSON.parse(savedMessages);
+        if (Array.isArray(parsedMessages) && parsedMessages.length > 0) {
+          setMessages(parsedMessages);
+        }
+      } catch (error) {
+        console.error("Error loading saved messages:", error);
+      }
+    }
   }, []);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -116,14 +139,16 @@ export default function Chat() {
 
   const handleNewConversation = () => {
     clearConversationHistory();
-    setMessages([
-      {
-        id: 1,
-        role: "assistant",
-        content: `Hello${user?.firstName ? `, ${user.firstName}` : ""}! I'm Minda. How can I support you today?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      },
-    ]);
+    const newInitialMessage = {
+      id: 1,
+      role: "assistant",
+      content: `Hello${user?.firstName ? `, ${user.firstName}` : ""}! I'm Minda. How can I support you today?`,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setMessages([newInitialMessage]);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([newInitialMessage]));
+
     toast({
       title: "New conversation started",
       description: "Your previous conversation has been cleared.",
