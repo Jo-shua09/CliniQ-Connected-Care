@@ -206,6 +206,55 @@ export default function Dashboard() {
           <VitalCard onVitalsUpdate={setVitals} onDeviceStatusUpdate={(online) => setDeviceOnline(online)} />
         </div>
 
+        {/* ECG and EMG Vitals for Premium users */}
+        {isProfessional && (
+          <div className="mb-6 sm:mb-8">
+            <div className="mb-4">
+              <h2 className="font-heading text-base sm:text-lg font-semibold text-foreground">Advanced Monitoring</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* ECG Vital */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="rounded-xl border border-border bg-card p-4 shadow-card"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <Activity className="h-6 w-6 text-green-500" />
+                  <div className="px-2 py-1 rounded-full text-xs font-medium border text-green-600 border-green-600 bg-green-100">Normal</div>
+                </div>
+                <h4 className="font-medium text-foreground mb-1">ECG Signal</h4>
+                <div className="text-2xl font-bold text-foreground">
+                  72
+                  <span className="text-sm text-muted-foreground ml-1">bpm</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Updated just now</p>
+              </motion.div>
+
+              {/* EMG Vital */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-xl border border-border bg-card p-4 shadow-card"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <Wind className="h-6 w-6 text-green-500" />
+                  <div className="px-2 py-1 rounded-full text-xs font-medium border text-green-600 border-green-600 bg-green-100">Normal</div>
+                </div>
+                <h4 className="font-medium text-foreground mb-1">EMG Activity</h4>
+                <div className="text-2xl font-bold text-foreground">
+                  85
+                  <span className="text-sm text-muted-foreground ml-1">μV</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Updated just now</p>
+              </motion.div>
+            </div>
+          </div>
+        )}
+
         {/* Upgrade Banner for Standard users */}
         {!isProfessional && (
           <motion.div

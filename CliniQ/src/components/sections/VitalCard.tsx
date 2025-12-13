@@ -18,7 +18,6 @@ interface Vital {
 interface VitalCardProps {
   onVitalsUpdate?: (vitals: Vital[]) => void;
   onDeviceStatusUpdate?: (online: boolean) => void;
-  isPremium?: boolean;
 }
 
 interface VitalsData {
@@ -34,7 +33,7 @@ interface VitalsData {
   time_diff_seconds?: unknown;
 }
 
-export default function VitalCard({ onVitalsUpdate, onDeviceStatusUpdate, isPremium = false }: VitalCardProps) {
+export default function VitalCard({ onVitalsUpdate, onDeviceStatusUpdate }: VitalCardProps) {
   const [vitals, setVitals] = useState<VitalsData | null>(null);
   const [lastVitalsData, setLastVitalsData] = useState<VitalsData | null>(() => {
     const stored = localStorage.getItem("lastVitals");
@@ -247,7 +246,7 @@ export default function VitalCard({ onVitalsUpdate, onDeviceStatusUpdate, isPrem
     },
   ];
 
-  const liveVitals: Vital[] = isPremium ? [...baseVitals, ...premiumVitals] : baseVitals;
+  const liveVitals: Vital[] = baseVitals;
 
   const getStatusColor = (status: VitalStatus) => {
     switch (status) {
