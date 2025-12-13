@@ -3,7 +3,7 @@
 ## Team Members
 - **Ohieku Eneji Peacemaker**
 - **Onyeka Joshua Ituma**
-- **Ituma Chidi Mathaias**
+- **Ituma Chidi Moses**
 
 
 ## Overview:
