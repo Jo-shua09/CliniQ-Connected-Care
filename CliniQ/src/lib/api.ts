@@ -44,6 +44,7 @@ export interface PendingRequest {
   gender: string;
   contact: string;
   avatar: string;
+  relation: string;
   requestType: string;
   requestedData: string[];
 }
@@ -118,6 +119,19 @@ export interface SetDeviceIdRequest {
 
 export interface HasDeviceRequest {
   username: string;
+}
+
+export interface VitalsData {
+  spo2?: number;
+  bpm?: number;
+  temp?: number;
+  sbp?: number;
+  dbp?: number;
+  current_step_count?: number;
+  alert?: string;
+  online?: boolean;
+  ecg_sensor_frame?: unknown;
+  time_diff_seconds?: unknown;
 }
 
 export interface ApiResponse {
@@ -390,6 +404,13 @@ class ApiClient {
   async isPremium(data: IsPremiumRequest): Promise<ApiResponse> {
     const params = new URLSearchParams(data as any);
     return this.request<ApiResponse>(`/is_premium?${params.toString()}`, {
+      method: "GET",
+    });
+  }
+
+  async getUserVitals(username: string): Promise<VitalsData> {
+    const params = new URLSearchParams({ username });
+    return this.request<VitalsData>(`/get_vitals?${params.toString()}`, {
       method: "GET",
     });
   }

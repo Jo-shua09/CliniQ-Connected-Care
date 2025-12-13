@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { apiClient, PendingRequest } from "@/lib/api";
+import { apiClient, PendingRequest, VitalsData } from "@/lib/api";
 
 // Types for UI
 interface MonitoringPerson {
@@ -71,6 +71,7 @@ export default function Network() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState("");
   const [rawResponse, setRawResponse] = useState<any>(null);
+  const [vitalsCache, setVitalsCache] = useState<Record<string, VitalsData>>({});
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
@@ -112,6 +113,7 @@ export default function Network() {
             gender: "Unknown",
             contact: "",
             avatar: user.username.slice(0, 2).toUpperCase(),
+            relation: "Unknown",
             requestType: "Wants to monitor you",
             requestedData: ["Vital Signs", "Diet Data"],
           }));
@@ -179,41 +181,44 @@ export default function Network() {
 
           // Check for simulated connections
           const simulatedConnections = JSON.parse(localStorage.getItem("simulated_connections") || "[]");
-          const connectionsForUser = simulatedConnections.filter(
-            (conn: any) => conn.monitored === currentUsername || conn.monitored_by === currentUsername
-          );
+          const connectionsForUser = simulatedConnections.filter((conn: unknown) => {
+            const connection = conn as { monitored: string; monitored_by: string };
+            return connection.monitored === currentUsername || connection.monitored_by === currentUsername;
+          });
 
           console.log("Simulated connections for user:", connectionsForUser);
 
           if (connectionsForUser.length > 0) {
             // Process simulated connections
-            connectionsForUser.forEach((conn: any) => {
-              const otherUsername = conn.monitored === currentUsername ? conn.monitored_by : conn.monitored;
+            connectionsForUser.forEach((conn: unknown) => {
+              const connection = conn as { id: number; monitored: string; monitored_by: string; accepted: boolean };
+              const otherUsername = connection.monitored === currentUsername ? connection.monitored_by : connection.monitored;
 
-              if (!conn.accepted) {
+              if (!connection.accepted) {
                 // Pending request
-                if (conn.monitored_by === currentUsername) {
+                if (connection.monitored_by === currentUsername) {
                   // I want to monitor someone (pending)
                   console.log(`Simulated: I want to monitor ${otherUsername} (pending)`);
                 } else {
                   // Someone wants to monitor me (pending)
                   myPendingRequests.push({
-                    id: conn.id,
+                    id: connection.id,
                     name: otherUsername,
                     email: "",
                     gender: "Unknown",
                     contact: "",
                     avatar: otherUsername.slice(0, 2).toUpperCase(),
+                    relation: "Unknown",
                     requestType: "Wants to monitor you",
                     requestedData: ["Vital Signs", "Diet Data"],
                   });
                 }
               } else {
                 // Accepted connection
-                if (conn.monitored_by === currentUsername) {
+                if (connection.monitored_by === currentUsername) {
                   // I'm monitoring someone
                   myMonitoringPeople.push({
-                    id: conn.id,
+                    id: connection.id,
                     name: otherUsername,
                     email: "",
                     gender: "Unknown",
@@ -232,7 +237,7 @@ export default function Network() {
                 } else {
                   // Someone is monitoring me
                   myMonitoringMe.push({
-                    id: conn.id,
+                    id: connection.id,
                     name: otherUsername,
                     email: "",
                     gender: "Unknown",
@@ -254,7 +259,7 @@ export default function Network() {
         setMonitoringPeople(myMonitoringPeople);
         setMonitoringMe(myMonitoringMe);
         setPendingRequests(myPendingRequests);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error loading connections:", error);
 
         // Even if there's an error, try to load simulated connections
@@ -262,35 +267,38 @@ export default function Network() {
           const user = JSON.parse(localStorage.getItem("cliniq_user") || "{}");
           if (user.username) {
             const simulatedConnections = JSON.parse(localStorage.getItem("simulated_connections") || "[]");
-            const connectionsForUser = simulatedConnections.filter(
-              (conn: any) => conn.monitored === user.username || conn.monitored_by === user.username
-            );
+            const connectionsForUser = simulatedConnections.filter((conn: unknown) => {
+              const connection = conn as { monitored: string; monitored_by: string };
+              return connection.monitored === user.username || connection.monitored_by === user.username;
+            });
 
             if (connectionsForUser.length > 0) {
               const myPendingRequests: PendingRequest[] = [];
               const myMonitoringPeople: MonitoringPerson[] = [];
               const myMonitoringMe: MonitoringMePerson[] = [];
 
-              connectionsForUser.forEach((conn: any) => {
-                const otherUsername = conn.monitored === user.username ? conn.monitored_by : conn.monitored;
+              connectionsForUser.forEach((conn: unknown) => {
+                const connection = conn as { id: number; monitored: string; monitored_by: string; accepted: boolean };
+                const otherUsername = connection.monitored === user.username ? connection.monitored_by : connection.monitored;
 
-                if (!conn.accepted && conn.monitored === user.username) {
+                if (!connection.accepted && connection.monitored === user.username) {
                   // Someone wants to monitor me (pending)
                   myPendingRequests.push({
-                    id: conn.id,
+                    id: connection.id,
                     name: otherUsername,
                     email: "",
                     gender: "Unknown",
                     contact: "",
                     avatar: otherUsername.slice(0, 2).toUpperCase(),
+                    relation: "Unknown",
                     requestType: "Wants to monitor you",
                     requestedData: ["Vital Signs", "Diet Data"],
                   });
-                } else if (conn.accepted) {
-                  if (conn.monitored_by === user.username) {
+                } else if (connection.accepted) {
+                  if (connection.monitored_by === user.username) {
                     // I'm monitoring someone
                     myMonitoringPeople.push({
-                      id: conn.id,
+                      id: connection.id,
                       name: otherUsername,
                       email: "",
                       gender: "Unknown",
@@ -309,7 +317,7 @@ export default function Network() {
                   } else {
                     // Someone is monitoring me
                     myMonitoringMe.push({
-                      id: conn.id,
+                      id: connection.id,
                       name: otherUsername,
                       email: "",
                       gender: "Unknown",
@@ -328,13 +336,13 @@ export default function Network() {
               return;
             }
           }
-        } catch (simError) {
+        } catch (simError: unknown) {
           console.error("Error loading simulated connections:", simError);
         }
 
         toast({
           title: "Error loading connections",
-          description: error.message || "Failed to load connections",
+          description: error instanceof Error ? error.message : "Failed to load connections",
           variant: "destructive",
         });
       } finally {
@@ -344,6 +352,40 @@ export default function Network() {
 
     fetchConnections();
   }, [toast]);
+
+  // Fetch vitals for monitored people
+  useEffect(() => {
+    const fetchVitalsForMonitoredPeople = async () => {
+      if (monitoringPeople.length === 0) return;
+
+      const updatedPeople = await Promise.all(
+        monitoringPeople.map(async (person) => {
+          if (person.status === "pending") return person; // Skip pending requests
+
+          try {
+            const vitals = await apiClient.getUserVitals(person.name);
+            return {
+              ...person,
+              vitalSigns: {
+                heartRate: vitals.bpm || 0,
+                oxygenLevel: vitals.spo2 || 0,
+                bloodSugar: vitals.sbp || 0, // Using sbp as blood sugar for now
+                temperature: vitals.temp || 0,
+              },
+              lastUpdate: vitals.online ? "Live" : "Last updated",
+            };
+          } catch (error) {
+            console.error(`Error fetching vitals for ${person.name}:`, error);
+            return person; // Return original person if fetch fails
+          }
+        })
+      );
+
+      setMonitoringPeople(updatedPeople);
+    };
+
+    fetchVitalsForMonitoredPeople();
+  }, [monitoringPeople]); // Run when monitoringPeople changes
 
   const handleAcceptRequest = async (id: number, selectedPermissions: string[]) => {
     try {
