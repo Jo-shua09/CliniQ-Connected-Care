@@ -22,6 +22,8 @@ CliniQ transforms passive health tracking into proactive, connected, and profess
 ## Relevant Links:
 - Hosted Frontend dashboard on Vercel [click here](https://cliniqconect.vercel.app/)
 - Hosted Backend Admin panel on Python Anywhere (Data records) [click here](https://cliniq2.pythonanywhere.com/admin)
+- Business pitch deck [click here](https://drive.google.com/drive/folders/1AJIALGnHRQN8GUh9sMC0lLBujPXFpxKh?usp=drive_link)
+- Extensive Product Demo [click here](https://youtu.be/_QW7-G-2h1I)
 
 ## Vision & Future Improvements
 Our Vision is to make an ecosystem where medical data can be easily acquired, stored and utilized to solve health challenges through ML/AI. We are passionate about making medical tech accessible and cheap so people in remote areas can use it. In doing that we make our Virtual doctor assistant muiltilingual so there is no barrier.
