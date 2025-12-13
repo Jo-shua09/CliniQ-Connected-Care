@@ -17,5 +17,6 @@ urlpatterns = [
     path("device_push", views.device_push_data),
     path("user_profile", views.user_profile),
     path("user_profiles", views.user_profiles),
-    path("has_vitals", views.get_vitals)
+    path("get_vitals", views.get_vitals),
+    # path("has_vitals", views.has_vitals),
 ]

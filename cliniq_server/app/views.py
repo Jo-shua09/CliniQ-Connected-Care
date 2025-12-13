@@ -5,6 +5,7 @@ import random
 import os
 import datetime
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 
 deployed_on_pythonanywhere = False
@@ -146,7 +147,7 @@ def getBP(age, gender, spo2, bpm, temp):
         return pred[0][0], pred[0][1]
     return random.randint(110, 130), random.randint(70, 90)
 
-
+@csrf_exempt
 def device_push_data(request):
     config = Config.objects.all()[0]
 
@@ -157,7 +158,7 @@ def device_push_data(request):
     temp = float(request.GET["temp"])
     sbp, dbp = getBP(age, gender, spo2, bpm, temp)
 
-    DeviceRecords.objects.create(age=age, gender=gender, spo2=spo2, bpm=bpm, temp=temp, sbp=sbp, dbp=dbp)
+    DeviceRecords.objects.create(age=age, gender=gender, blood_oxygen=spo2, heart_rate=bpm, temp=temp, sbp=sbp, dbp=dbp, ecg_sensor_frame="[]")
     return JsonResponse({"success": True})
 
 def user_profile(request):
@@ -191,9 +192,10 @@ def user_profiles(request):
 
 def get_vitals(request):
     username = request.GET["username"]
-    if username.device_id != "56781234":
+    username_ = UserProfile.objects.get(username=username)
+    if username_.device_id != "56781234":
         return JsonResponse({"has_vitals": False})
-    
+
     record = DeviceRecords.objects.last()
     time_diff = timezone.now() - record.timestamp
     seconds_diff = time_diff.total_seconds()
@@ -206,6 +208,7 @@ def get_vitals(request):
         "dbp": record.dbp,
         "ecg_sensor_frame": list(record.ecg_sensor_frame),
         "time_diff_seconds": seconds_diff,
+        "online": (datetime.datetime.now(datetime.timezone.utc) - record.timestamp).total_seconds() < 3,
     })
 
 
